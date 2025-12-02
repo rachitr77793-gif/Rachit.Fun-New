@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dino Run — Rachit.Fun</title>
+
+<style>
+  :root{--card:#fff}
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+    background:#f7fbff;
+    color:#071133;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  /* TOPBAR (your exact code) */
+  .topbar{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 20px;
+    background:transparent;
+    border-bottom:1px solid rgba(0,0,0,0.03);
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+
+  .left{display:flex;align-items:center;gap:12px;font-weight:800}
+  .left .logo{font-size:20px}
+  .left .site{font-size:20px}
+
+  .right{display:flex;align-items:center;gap:10px}
+
+  .btn{
+    background:var(--card);
+    border:1px solid rgba(0,0,0,0.06);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  .color-picker{
+    width:36px;height:28px;border-radius:8px;border:1px solid #ccc;
+  }
+
+  /* GAME AREA */
+  #gameBox{
+    margin-top:30px;
+    background:white;
+    width:700px;
+    height:300px;
+    border:2px solid #ccc;
+    position:relative;
+    overflow:hidden;
+    border-radius:10px;
+  }
+
+  #dino{
+    position:absolute;
+    bottom:15px;
+    left:40px;
+    font-size:40px;
+    transition:bottom 0.1s;
+
+    /* ✔ CHANGE #1 — Make dino face right */
+    transform: scaleX(-1);
+    display: inline-block;
+  }
+
+  .obstacle{
+    position:absolute;
+    font-size:35px;
+  }
+
+  #ground{
+    position:absolute;
+    bottom:0;
+    left:0;
+    width:100%;
+    height:4px;
+    background:#444;
+  }
+
+  /* CONTROL BAR */
+  #controls{
+    margin-top:20px;
+    display:flex;
+    gap:15px;
+  }
+
+  #score{
+    font-size:20px;
+    font-weight:800;
+    margin-top:10px;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="left">
+    <div class="logo">🎮</div>
+    <div class="site">Rachit.Fun</div>
+  </div>
+
+  <div class="right">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+      BG
+      <input id="bgPicker" class="color-picker" type="color" value="#f7fbff" />
+    </label>
+
+    <button class="btn" id="homeBtn">Home</button>
+    <button class="btn" id="resetAllBtn">Reset All</button>
+  </div>
+</header>
+
+
+<!-- GAME BOX -->
+<div id="gameBox">
+  <div id="dino">🦖</div>
+  <div id="ground"></div>
+</div>
+
+<!-- CONTROLS -->
+<div id="controls">
+  <button class="btn" id="startBtn">Start</button>
+  <button class="btn" id="restartBtn">Restart</button>
+  <button class="btn" id="difficultyBtn">Difficulty: Easy</button>
+</div>
+
+<div id="score">Score: 0</div>
+
+
+<script>
+/* ----------- Textbar BG Persistence ----------- */
+const BG_KEY = 'rachit_bg';
+const bgPicker = document.getElementById('bgPicker');
+const saved = localStorage.getItem(BG_KEY);
+if (saved) {
+  document.body.style.background = saved;
+  bgPicker.value = saved;
+}
+bgPicker.addEventListener('input', e => {
+  document.body.style.background = e.target.value;
+  localStorage.setItem(BG_KEY, e.target.value);
+});
+
+document.getElementById('homeBtn').onclick = () => location.href = 'HomePagefinal.html';
+document.getElementById('resetAllBtn').onclick = () => {
+  if(confirm("Reset everything?")) {
+    localStorage.removeItem(BG_KEY);
+    location.reload();
+  }
+};
+
+/* ----------- GAME LOGIC ----------- */
+const gameBox = document.getElementById("gameBox");
+const dino = document.getElementById("dino");
+let isJumping = false;
+let jumpHeight = 0;
+let gravity = 0.6;
+let velocity = 0;
+
+let gameSpeed = 6;
+let obstacleInterval = null;
+let gameLoop = null;
+let score = 0;
+let scoreTimer = null;
+
+let difficulty = "Easy";
+
+function jump() {
+  if (isJumping) return;
+  isJumping = true;
+  velocity = 13; // higher jump
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" || e.key === " " || e.key === "ArrowUp") {
+    e.preventDefault();
+    jump();
+  }
+});
+gameBox.addEventListener("click", jump);
+
+function startGame() {
+  score = 0;
+  document.getElementById("score").innerText = "Score: 0";
+
+  clearInterval(obstacleInterval);
+  clearInterval(scoreTimer);
+  cancelAnimationFrame(gameLoop);
+
+  // Adjust obstacle spawn rate based on difficulty
+  let spawnRate = difficulty === "Easy" ? 1500 : difficulty === "Medium" ? 1100 : 800;
+  obstacleInterval = setInterval(spawnObstacle, spawnRate);
+  
+  scoreTimer = setInterval(() => {
+    score++;
+    document.getElementById("score").innerText = "Score: " + score;
+  }, 200);
+
+  updateGame();
+}
+
+function restartGame() {
+  location.reload();
+}
+
+function spawnObstacle() {
+  const obs = document.createElement("div");
+  obs.classList.add("obstacle");
+
+  // 50% cactus / 50% bird
+  if (Math.random() < 0.5) {
+    obs.innerText = "🌵";
+    obs.style.bottom = "10px";
+
+  } else {
+    obs.innerText = "🐦";
+
+    /* ✔ CHANGE #2 — Birds are always in air */
+    obs.style.bottom = Math.random() < 0.5 ? "80px" : "120px";
+  }
+
+  obs.style.right = "-40px";
+  gameBox.appendChild(obs);
+}
+
+function updateGame() {
+  // Jump physics
+  if (isJumping) {
+    jumpHeight += velocity;
+    velocity -= gravity;
+
+    if (jumpHeight <= 0) {
+      jumpHeight = 0;
+      isJumping = false;
+    }
+    dino.style.bottom = (15 + jumpHeight) + "px";
+  }
+
+  // Move obstacles
+  const obstacles = document.querySelectorAll(".obstacle");
+  obstacles.forEach(o => {
+    let x = parseInt(o.style.right);
+    x += gameSpeed;
+    o.style.right = x + "px";
+
+    // Collision check
+    const dinoRect = dino.getBoundingClientRect();
+    const obsRect = o.getBoundingClientRect();
+
+    if (
+      dinoRect.left < obsRect.right &&
+      dinoRect.right > obsRect.left &&
+      dinoRect.bottom > obsRect.top &&
+      dinoRect.top < obsRect.bottom
+    ) {
+      alert("Game Over! Score: " + score);
+      restartGame();
+    }
+
+    if (x > 750) o.remove();
+  });
+
+  gameLoop = requestAnimationFrame(updateGame);
+}
+
+/* ----------- Buttons ----------- */
+document.getElementById("startBtn").onclick = startGame;
+document.getElementById("restartBtn").onclick = restartGame;
+
+document.getElementById("difficultyBtn").onclick = () => {
+  if (difficulty === "Easy") {
+    difficulty = "Medium";
+    gameSpeed = 9;
+  } else if (difficulty === "Medium") {
+    difficulty = "Hard";
+    gameSpeed = 13;
+  } else {
+    difficulty = "Easy";
+    gameSpeed = 6;
+  }
+  document.getElementById("difficultyBtn").innerText = "Difficulty: " + difficulty;
+};
+</script>
+
+</body>
+</html>

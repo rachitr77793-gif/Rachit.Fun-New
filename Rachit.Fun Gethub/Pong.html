@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rachit.Fun — Pong (fixed)</title>
+<style>
+  :root{--card:#fff}
+  *{box-sizing:border-box;user-select:none}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:#f7fbff;color:#071133}
+  /* EXACT TASKBAR - DO NOT CHANGE */
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:transparent;border-bottom:1px solid rgba(0,0,0,0.03);position:sticky;top:0;z-index:50}
+  .left{display:flex;align-items:center;gap:12px;font-weight:800}
+  .left .logo{font-size:20px}
+  .left .site{font-size:20px}
+  .right{display:flex;align-items:center;gap:10px}
+  .color-picker{width:36px;height:28px;border-radius:8px;border:1px solid #ccc;padding:0}
+  .btn{background:var(--card);border:1px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+
+  /* layout */
+  .wrap{max-width:1100px;margin:18px auto;padding:12px}
+  .panel{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+  .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(12,15,30,0.06)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .small{font-size:14px;color:#334155}
+  .canvas-wrap{min-width:520px;min-height:340px;display:flex;flex-direction:column;align-items:center}
+  canvas#pong{background:#081025;border-radius:10px;display:block;max-width:100%}
+  .side{width:300px;padding:12px;border-radius:12px}
+  .stat{font-weight:800;margin:8px 0}
+  .toggle{padding:6px 8px;border-radius:8px;border:1px solid #ddd}
+  .mobile-controls{display:none;gap:8px;justify-content:center;margin-top:12px}
+  .joy{width:56px;height:56px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:var(--card);font-weight:800;font-size:18px}
+  @media (max-width:900px){ .panel{flex-direction:column;align-items:center} .side{width:92%} .mobile-controls{display:flex} .canvas-wrap{width:92%} }
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.35);z-index:90;visibility:hidden;opacity:0;transition:.18s}
+  .overlay.visible{visibility:visible;opacity:1}
+  .overlay .panel{background:white;padding:18px;border-radius:12px;min-width:260px;text-align:center}
+  .muted{color:#64748b;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- TASKBAR (exact as you gave) -->
+<header class="topbar">
+  <div class="left">
+    <div class="logo">🎮</div>
+    <div class="site">Rachit.Fun</div>
+  </div>
+
+  <div class="right">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+      BG
+      <input id="bgPicker" class="color-picker" type="color" value="#f7fbff" />
+    </label>
+
+    <button class="btn" id="homeBtn">Home</button>
+    <button class="btn" id="resetAllBtn">Reset All</button>
+  </div>
+</header>
+
+<!-- GAME UI -->
+<div class="wrap">
+  <div class="panel">
+    <div class="card canvas-wrap" id="gameCard">
+      <div class="controls" style="justify-content:center;margin-bottom:10px">
+        <button class="btn" id="startBtn">Start</button>
+        <button class="btn" id="pauseBtn" disabled>Pause</button>
+        <button class="btn" id="resumeBtn" disabled>Resume</button>
+        <button class="btn" id="resetBtn">Reset</button>
+
+        <label class="small">Mode:
+          <select id="mode" class="toggle">
+            <option value="ai">AI</option>
+            <option value="pvp">2-Player</option>
+          </select>
+        </label>
+
+        <label class="small">Timed:
+          <select id="timed" class="toggle">
+            <option value="off">Off</option>
+            <option value="30">30s</option>
+            <option value="60">60s</option>
+            <option value="120">120s</option>
+          </select>
+        </label>
+
+        <label class="small">Speed:
+          <select id="speed" class="toggle">
+            <option value="4">Slow</option>
+            <option value="6" selected>Normal</option>
+            <option value="8">Fast</option>
+            <option value="11">Insane</option>
+          </select>
+        </label>
+      </div>
+
+      <canvas id="pong" width="900" height="560" aria-label="Pong game canvas"></canvas>
+
+      <div class="mobile-controls" aria-hidden="true" style="margin-top:8px">
+        <button class="joy" id="paddleUp">▲</button>
+        <button class="joy" id="paddleDown">▼</button>
+      </div>
+
+      <div style="text-align:center;margin-top:10px" class="muted">Use Arrow keys to move left paddle. In 2-player mode use W/S for right paddle.</div>
+    </div>
+
+    <div class="card side">
+      <div class="stat">Score — <span id="scoreDisplay">0 : 0</span></div>
+      <div class="stat">Best (All): <span id="bestAll">0</span></div>
+      <div class="stat">Best (Timed): <span id="bestTimed">0</span></div>
+      <div style="margin-top:8px" class="muted">How it works</div>
+      <p style="font-size:13px;color:#334155">Classic Pong. AI mode on by default. Timed mode ends after selected seconds. Speed affects ball velocity.</p>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="saveBest">Save Best</button>
+        <button class="btn" id="toggleAI">Toggle AI</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay"><div class="panel"><div id="overlayText" style="font-weight:800;margin-bottom:12px"></div><div style="margin-top:10px"><button class="btn" id="overlayOk">OK</button></div></div></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  /* ---------- TASKBAR (unchanged) ---------- */
+  const BG_KEY = 'rachit_bg';
+  const bgPicker = document.getElementById('bgPicker');
+  const saved = localStorage.getItem(BG_KEY);
+  if (saved) { document.body.style.background = saved; bgPicker.value = saved; }
+  bgPicker.addEventListener('input', e => { document.body.style.background = e.target.value; localStorage.setItem(BG_KEY, e.target.value); });
+  document.getElementById('homeBtn').addEventListener('click', () => window.location.href = 'index.html');
+  document.getElementById('resetAllBtn').addEventListener('click', ()=>{ if(confirm('Reset everything?')){ localStorage.removeItem(BG_KEY); location.reload(); } });
+
+  /* ---------- Canvas & game state ---------- */
+  const canvas = document.getElementById('pong');
+  const ctx = canvas.getContext('2d');
+  let W = canvas.width, H = canvas.height;
+
+  // paddles & ball
+  const paddleW = 14, paddleH = 110;
+  let leftP = {x: 22, y: H/2 - paddleH/2};
+  let rightP = {x: W - 22 - paddleW, y: H/2 - paddleH/2};
+  let ball = {x: W/2, y: H/2, r: 10};
+  let baseSpeed = parseInt(document.getElementById('speed').value, 10);
+  let ballSpeed = {x: baseSpeed * (Math.random() > 0.5 ? 1 : -1), y: (Math.random()*baseSpeed*0.6)*(Math.random()>0.5?1:-1)};
+
+  // game controls
+  let leftScore = 0, rightScore = 0;
+  let running = false, paused = false;
+  let intervalId = null, timedId = null;
+  let aiEnabled = true;
+
+  // UI references
+  const startBtn = document.getElementById('startBtn'),
+        pauseBtn = document.getElementById('pauseBtn'),
+        resumeBtn = document.getElementById('resumeBtn'),
+        resetBtn = document.getElementById('resetBtn'),
+        modeSel = document.getElementById('mode'),
+        timedSel = document.getElementById('timed'),
+        speedSel = document.getElementById('speed'),
+        scoreDisplay = document.getElementById('scoreDisplay'),
+        bestAllEl = document.getElementById('bestAll'),
+        bestTimedEl = document.getElementById('bestTimed'),
+        saveBestBtn = document.getElementById('saveBest'),
+        toggleAIBtn = document.getElementById('toggleAI'),
+        overlay = document.getElementById('overlay'),
+        overlayText = document.getElementById('overlayText'),
+        overlayOk = document.getElementById('overlayOk'),
+        paddleUp = document.getElementById('paddleUp'),
+        paddleDown = document.getElementById('paddleDown');
+
+  const BEST_ALL_KEY = 'rachit_pong_best_all';
+  const BEST_TIMED_KEY = 'rachit_pong_best_timed';
+
+  function loadBests(){
+    bestAllEl.textContent = localStorage.getItem(BEST_ALL_KEY) || '0';
+    bestTimedEl.textContent = localStorage.getItem(BEST_TIMED_KEY) || '0';
+  }
+  loadBests();
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function draw(){
+    // clear
+    ctx.fillStyle = '#081025';
+    ctx.fillRect(0,0,W,H);
+
+    // center dash
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.setLineDash([10,10]);
+    ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // paddles
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(leftP.x, leftP.y, paddleW, paddleH);
+    ctx.fillRect(rightP.x, rightP.y, paddleW, paddleH);
+
+    // ball
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+
+    // update score UI
+    scoreDisplay.textContent = leftScore + ' : ' + rightScore;
+  }
+
+  function resetBall(servingLeft=false){
+    ball.x = W/2; ball.y = H/2;
+    const speed = parseInt(speedSel.value,10);
+    ballSpeed.x = (Math.random()>0.5 ? 1 : -1) * speed;
+    ballSpeed.y = (Math.random()*speed*0.6) * (Math.random()>0.5?1:-1);
+  }
+
+  function step(){
+    if(!running || paused) return;
+
+    ball.x += ballSpeed.x;
+    ball.y += ballSpeed.y;
+
+    // wall bounce
+    if(ball.y - ball.r <= 0 || ball.y + ball.r >= H){ ballSpeed.y *= -1; }
+
+    // left paddle collision
+    if(ball.x - ball.r <= leftP.x + paddleW && ball.x - ball.r >= leftP.x){
+      if(ball.y >= leftP.y && ball.y <= leftP.y + paddleH){
+        ballSpeed.x *= -1;
+        const diff = (ball.y - (leftP.y + paddleH/2)) / (paddleH/2);
+        ballSpeed.y = diff * Math.abs(parseInt(speedSel.value,10)) * 0.9;
+      }
+    }
+
+    // right paddle collision
+    if(ball.x + ball.r >= rightP.x && ball.x + ball.r <= rightP.x + paddleW){
+      if(ball.y >= rightP.y && ball.y <= rightP.y + paddleH){
+        ballSpeed.x *= -1;
+        const diff = (ball.y - (rightP.y + paddleH/2)) / (paddleH/2);
+        ballSpeed.y = diff * Math.abs(parseInt(speedSel.value,10)) * 0.9;
+      }
+    }
+
+    // scoring
+    if(ball.x + ball.r < 0){
+      rightScore++;
+      resetBall(true);
+      ballSpeed.x *= 1.05;
+    }
+    if(ball.x - ball.r > W){
+      leftScore++;
+      resetBall(false);
+      ballSpeed.x *= 1.05;
+    }
+
+    // AI movement if enabled + mode set to ai
+    if(aiEnabled && modeSel.value === 'ai'){
+      const target = ball.y - paddleH/2;
+      rightP.y += (target - rightP.y) * 0.08; // smoothing
+      rightP.y = clamp(rightP.y, 0, H - paddleH);
+    }
+
+    // clamp paddles
+    leftP.y = clamp(leftP.y, 0, H - paddleH);
+    rightP.y = clamp(rightP.y, 0, H - paddleH);
+
+    draw();
+  }
+
+  // input handlers
+  window.addEventListener('keydown', (e)=>{
+    if(['ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+    if(e.key === 'ArrowUp') leftP.y -= 30;
+    if(e.key === 'ArrowDown') leftP.y += 30;
+    // W/S for right (when pvp)
+    if(e.key === 'w' || e.key === 'W') rightP.y -= 30;
+    if(e.key === 's' || e.key === 'S') rightP.y += 30;
+
+    if(e.key === 'p' || e.key === 'P'){
+      if(running && !paused) pauseGame();
+      else if(running && paused) resumeGame();
+    }
+    if(e.key === 'r' || e.key === 'R'){ doReset(); }
+  });
+
+  // mobile
+  paddleUp.addEventListener('touchstart', e=>{ leftP.y -= 40; e.preventDefault(); });
+  paddleDown.addEventListener('touchstart', e=>{ leftP.y += 40; e.preventDefault(); });
+  paddleUp.addEventListener('mousedown', ()=> leftP.y -= 40);
+  paddleDown.addEventListener('mousedown', ()=> leftP.y += 40);
+
+  // UI functions
+  function startCountdown(cb){
+    overlayText.textContent = 'Get ready 3';
+    overlay.classList.add('visible');
+    let n = 3;
+    const t = setInterval(()=>{
+      n--;
+      overlayText.textContent = n>0 ? 'Get ready ' + n : 'GO!';
+      if(n <= 0){
+        clearInterval(t);
+        setTimeout(()=>{ overlay.classList.remove('visible'); cb(); }, 400);
+      }
+    }, 1000);
+  }
+
+  function startGame(){
+    if(running) return;
+    aiEnabled = (modeSel.value === 'ai');
+    leftScore = 0; rightScore = 0;
+    leftP.y = H/2 - paddleH/2; rightP.y = H/2 - paddleH/2;
+    resetBall();
+    startBtn.disabled = true; pauseBtn.disabled = false; resumeBtn.disabled = true;
+    startCountdown(()=> {
+      running = true; paused = false;
+      intervalId = setInterval(step, 1000/60);
+      if(timedSel.value !== 'off'){
+        let left = parseInt(timedSel.value,10);
+        overlayText.textContent = 'Time: ' + left + 's';
+        overlay.classList.add('visible');
+        timedId = setInterval(()=>{
+          left--;
+          overlayText.textContent = 'Time: ' + left + 's';
+          overlay.classList.add('visible');
+          setTimeout(()=> overlay.classList.remove('visible'), 700);
+          if(left <= 0){
+            clearInterval(timedId); timedId = null;
+            const winner = leftScore > rightScore ? 'Left wins' : (rightScore > leftScore ? 'Right wins' : 'Draw');
+            endGame('Time up — ' + winner);
+          }
+        }, 1000);
+      }
+    });
+  }
+
+  function pauseGame(){
+    if(!running || paused) return;
+    paused = true;
+    clearInterval(intervalId); intervalId = null;
+    if(timedId){ clearInterval(timedId); timedId = null; }
+    pauseBtn.disabled = true; resumeBtn.disabled = false;
+    overlayText.textContent = 'Paused';
+    overlay.classList.add('visible');
+    setTimeout(()=> overlay.classList.remove('visible'), 900);
+  }
+
+  function resumeGame(){
+    if(!running || !paused) return;
+    paused = false;
+    intervalId = setInterval(step, 1000/60);
+    pauseBtn.disabled = false; resumeBtn.disabled = true;
+    overlayText.textContent = 'Resumed';
+    overlay.classList.add('visible');
+    setTimeout(()=> overlay.classList.remove('visible'), 700);
+    // timed mode: resume is approximate (keeps code simpler)
+  }
+
+  function endGame(reason){
+    running = false; paused = false;
+    clearInterval(intervalId); intervalId = null;
+    if(timedId){ clearInterval(timedId); timedId = null; }
+    startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true;
+    overlayText.textContent = reason + ' — Final ' + leftScore + ' : ' + rightScore;
+    overlay.classList.add('visible');
+
+    // save bests
+    const curMax = Math.max(leftScore, rightScore);
+    const prevAll = parseInt(localStorage.getItem(BEST_ALL_KEY) || '0', 10);
+    if(curMax > prevAll){
+      localStorage.setItem(BEST_ALL_KEY, curMax);
+      loadBests();
+      setTimeout(()=> showTemporary('New all-time best: ' + curMax, 1500), 800);
+    }
+    const prevTimed = parseInt(localStorage.getItem(BEST_TIMED_KEY) || '0', 10);
+    if(timedSel.value !== 'off' && curMax > prevTimed){
+      localStorage.setItem(BEST_TIMED_KEY, curMax);
+      loadBests();
+    }
+  }
+
+  function showTemporary(msg, ms=1000){
+    overlayText.textContent = msg; overlay.classList.add('visible');
+    setTimeout(()=> overlay.classList.remove('visible'), ms);
+  }
+
+  function doReset(){
+    clearInterval(intervalId); intervalId = null;
+    if(timedId){ clearInterval(timedId); timedId = null; }
+    running = false; paused = false;
+    leftScore = 0; rightScore = 0;
+    scoreDisplay.textContent = leftScore + ' : ' + rightScore;
+    leftP.y = H/2 - paddleH/2; rightP.y = H/2 - paddleH/2;
+    resetBall();
+    startBtn.disabled = false; pauseBtn.disabled = true; resumeBtn.disabled = true;
+    draw();
+  }
+
+  function saveBest(){
+    const highest = Math.max(leftScore, rightScore);
+    const prev = parseInt(localStorage.getItem(BEST_ALL_KEY) || '0', 10);
+    if(highest > prev){ localStorage.setItem(BEST_ALL_KEY, highest); loadBests(); showTemporary('Saved best: ' + highest, 1200); }
+    else showTemporary('Not higher than best', 900);
+  }
+
+  function toggleAI(){
+    aiEnabled = !aiEnabled; showTemporary('AI ' + (aiEnabled ? 'ON' : 'OFF'), 800);
+  }
+
+  // UI events
+  startBtn.addEventListener('click', startGame);
+  pauseBtn.addEventListener('click', pauseGame);
+  resumeBtn.addEventListener('click', resumeGame);
+  resetBtn.addEventListener('click', doReset);
+  saveBestBtn.addEventListener('click', saveBest);
+  toggleAIBtn.addEventListener('click', toggleAI);
+  overlayOk.addEventListener('click', ()=> overlay.classList.remove('visible'));
+  modeSel.addEventListener('change', ()=> { if(modeSel.value === 'pvp') showTemporary('2-Player mode',700); else showTemporary('AI mode',700); });
+  speedSel.addEventListener('change', ()=> { resetBall(); showTemporary('Speed set to ' + speedSel.value, 700); });
+
+  // responsive canvas sizing: keep logical resolution constant (900x560) but scale with CSS
+  function adaptCanvas(){
+    const maxW = Math.min(window.innerWidth - 40, 980);
+    const maxH = Math.min(window.innerHeight - 200, 700);
+    const scale = Math.min(maxW / 900, maxH / 560, 1);
+    canvas.style.width = Math.floor(900 * scale) + 'px';
+    canvas.style.height = Math.floor(560 * scale) + 'px';
+    // keep logical pixel dimensions constant
+    W = canvas.width; H = canvas.height;
+    // re-center paddles and ball proportionally (use safe clamp)
+    leftP.y = clamp(leftP.y, 0, H - paddleH);
+    rightP.y = clamp(rightP.y, 0, H - paddleH);
+    draw();
+  }
+  window.addEventListener('resize', adaptCanvas);
+  adaptCanvas(); // initial
+
+  // initial draw
+  draw();
+});
+</script>
+
+</body>
+</html>

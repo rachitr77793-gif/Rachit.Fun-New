@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🎮 Rachit.Fun — Maze Escape (Random)</title>
+<style>
+:root{--bg:#f7fbff;--card:#fff;--muted:#64748b}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#071133}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:transparent;border-bottom:1px solid rgba(0,0,0,0.03);position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800}
+.controls{display:flex;align-items:center;gap:10px}
+.btn{background:var(--card);border:1px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+.color-picker{width:36px;height:28px;border-radius:8px;border:1px solid #ccc}
+.score-pill{padding:6px 10px;border-radius:999px;background:linear-gradient(180deg,#fff,#f1f5f9);border:1px solid rgba(0,0,0,0.06);font-weight:700}
+.page-title{max-width:900px;margin:22px auto;text-align:center}
+.page-title h1{font-size:34px;margin:6px 0}
+.card{max-width:960px;margin:18px auto;background:var(--card);padding:20px;border-radius:16px;box-shadow:0 20px 40px rgba(12,15,30,0.06)}
+.controls-row{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
+.small-muted{color:var(--muted);font-size:14px;margin-bottom:10px}
+.grid-wrap{display:flex;gap:18px;justify-content:center;align-items:flex-start}
+.grid{width:660px;height:660px;background:#000;border-radius:12px;overflow:hidden;display:grid;border:6px solid #050505}
+.cell{border:0.6px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:20px}
+.legend{max-width:220px;font-size:14px;color:#0b1220}
+.legend h3{margin:6px 0}
+.legend ul{padding-left:18px}
+footer{max-width:900px;margin:30px auto;text-align:center;color:var(--muted);padding-bottom:30px}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.35);z-index:90}
+.panel{background:white;padding:18px;border-radius:12px;min-width:260px;text-align:center}
+.countdown{font-size:48px;font-weight:900}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><div class="logo">🎮</div><div class="site">Rachit.Fun</div></div>
+  <div class="controls">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:700">BG<input id="bgPicker" class="color-picker" type="color" value="#f7fbff" /></label>
+    <div id="score" class="score-pill">Score: 0</div>
+    <button class="btn" onclick="goHome()">Home</button>
+    <button class="btn" id="resetAllBtn">Reset All</button>
+  </div>
+</header>
+
+<div class="page-title">
+  <h1>🧭 Rachit.Fun — Maze Escape</h1>
+  <div class="small-muted">Random mazes with guaranteed solvable path. Collect the key 🔑, avoid spikes 🔺 and lightning ⚡. Each level grows harder and automatically advances.</div>
+</div>
+
+<section class="card">
+  <div class="controls-row">
+    <button class="btn" id="startBtn">Start</button>
+    <button class="btn" id="pauseBtn">Pause</button>
+    <button class="btn" id="resumeBtn">Resume</button>
+    <label class="score-pill" style="padding:6px 10px">Level: <span id="levelNum">1</span></label>
+  </div>
+
+  <div class="grid-wrap">
+    <div id="grid" class="grid"></div>
+    <div class="legend">
+      <h3>Legend / Descriptions</h3>
+      <ul>
+        <li>🤠 — Player (cowboy). Move with Arrow keys or WASD.</li>
+        <li>🔑 — Golden Key: pick to unlock the door. (Auto message hides in 2s)</li>
+        <li>🚪 — Door: step on it with a key to finish the level.</li>
+        <li>🔺 — Spikes: instantly kill on contact.</li>
+        <li>🟥 — Red Block: solid obstacle.</li>
+        <li>⚡ — Lightning: moving enemy that patrols. Touch = death.</li>
+        <li>🟤 — Coin: +5 score.</li>
+      </ul>
+      <div style="margin-top:12px;color:var(--muted)">Tips: Each level is random but has at least one safe route. Levels increase obstacles automatically.</div>
+    </div>
+  </div>
+</section>
+
+<footer>Rachit.Fun — made by Rachit Raikwar</footer>
+
+<div id="overlay" class="overlay" style="display:none"><div class="panel"><div id="overlayText" style="font-weight:800;margin-bottom:12px"></div><div id="countdown" class="countdown"></div><div style="margin-top:10px"><button class="btn" id="overlayOk">OK</button></div></div></div>
+
+<script>
+// Persistent BG
+const bgPicker = document.getElementById('bgPicker'); const savedBg = localStorage.getItem('rachit_bg'); if(savedBg){ document.body.style.background=savedBg; bgPicker.value=savedBg; } bgPicker.addEventListener('input', e=>{ document.body.style.background=e.target.value; localStorage.setItem('rachit_bg', e.target.value); });
+
+// GRID SETTINGS
+const CELL_COUNT = 21; // must be odd for perfect maze (21x21)
+const gridEl = document.getElementById('grid'); const levelLabel = document.getElementById('levelNum');
+let level = 1; let score = 0; document.getElementById('score').textContent = 'Score: '+score; levelLabel.textContent = level;
+
+// Game state
+let map = []; // 0 wall, 1 path
+let solutionPath = new Set();
+let player = {x:1,y:1};
+let key = {x:0,y:0};
+let door = {x:0,y:0};
+let coins = [];
+let spikes = [];
+let blocks = [];
+let enemies = []; // {x,y,dir,range}
+let hasKey = false;
+let running=false, paused=false; let enemyTimer=null;
+
+// UTIL
+function idx(x,y){return y*CELL_COUNT+x;}
+function inBounds(x,y){return x>=0&&y>=0&&x<CELL_COUNT&&y<CELL_COUNT;}
+
+// MAZE GENERATOR (recursive backtracker) — creates a perfect maze
+function generateMaze(){
+  // initialize grid with walls
+  map = new Array(CELL_COUNT*CELL_COUNT).fill(0);
+  // carve cells at odd coords
+  for(let y=1;y<CELL_COUNT;y+=2){ for(let x=1;x<CELL_COUNT;x+=2){ map[idx(x,y)] = 1; }}
+  // recursive backtracker
+  const visited = new Set();
+  function neighbors(cx,cy){
+    const N=[];
+    [[0,-2],[2,0],[0,2],[-2,0]].forEach(([dx,dy])=>{ const nx=cx+dx, ny=cy+dy; if(inBounds(nx,ny) && map[idx(nx,ny)]===1) N.push([nx,ny]); });
+    return N.sort(()=>Math.random()-0.5);
+  }
+  function carve(x,y){ visited.add(idx(x,y)); const nbs = neighbors(x,y);
+    for(const [nx,ny] of nbs){ if(!visited.has(idx(nx,ny))){ // remove wall between
+        map[idx((x+nx)/2,(y+ny)/2)] = 1; carve(nx,ny); }
+    }
+  }
+  carve(1,1);
+}
+
+// Find solution path from start to end with BFS
+function findSolution(){
+  const start = [1,1]; const end = [CELL_COUNT-2,CELL_COUNT-2];
+  const q=[start]; const prev = {}; prev[idx(start[0],start[1])] = null; let found=false;
+  while(q.length && !found){ const [x,y] = q.shift(); if(x===end[0]&&y===end[1]){ found=true; break; }
+    [[0,1],[1,0],[0,-1],[-1,0]].forEach(([dx,dy])=>{ const nx=x+dx, ny=y+dy; if(inBounds(nx,ny)&&map[idx(nx,ny)]===1 && prev[idx(nx,ny)]===undefined){ prev[idx(nx,ny)] = [x,y]; q.push([nx,ny]); } }); }
+  solutionPath.clear(); if(!found) return false; let cur = end; while(cur){ solutionPath.add(idx(cur[0],cur[1])); cur = prev[idx(cur[0],cur[1])]; }
+  return true;
+}
+
+// Place items ensuring at least one solution path cells remain free of static obstacles
+function populateObjects(difficulty){
+  // clear
+  coins = []; spikes = []; blocks=[]; enemies=[]; hasKey=false;
+  // key and door placed on solution path ends
+  const sol = Array.from(solutionPath).map(i=>[i % CELL_COUNT, Math.floor(i/CELL_COUNT)]);
+  key = {x: sol[Math.floor(sol.length*0.25)][0], y: sol[Math.floor(sol.length*0.25)][1]};
+  door = {x: sol[sol.length-1][0], y: sol[sol.length-1][1]};
+  player = {x: sol[0][0], y: sol[0][1]};
+
+  // place blocks/spikes/enemies on non-solution path walkable cells
+  const walkables=[];
+  for(let y=1;y<CELL_COUNT-1;y++){ for(let x=1;x<CELL_COUNT-1;x++){ if(map[idx(x,y)]===1 && !solutionPath.has(idx(x,y))){ walkables.push({x,y}); } }}
+  // shuffle
+  for(let i=walkables.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [walkables[i],walkables[j]]=[walkables[j],walkables[i]]; }
+  const spikesCount = Math.min( Math.floor(5 + difficulty*2 + Math.random()*5), walkables.length );
+  const blocksCount = Math.min( Math.floor(6 + difficulty*2 + Math.random()*6), walkables.length - spikesCount );
+  const coinsCount = Math.min( Math.floor(6 + difficulty + Math.random()*6), walkables.length - spikesCount - blocksCount );
+
+  let ptr = 0;
+  for(let i=0;i<spikesCount;i++){ spikes.push(walkables[ptr++]); }
+  for(let i=0;i<blocksCount;i++){ blocks.push(walkables[ptr++]); }
+  for(let i=0;i<coinsCount;i++){ coins.push(walkables[ptr++]); }
+
+  // enemies: place on walkable cells but give them a patrol range along corridor
+  const enemyCount = Math.min(2 + Math.floor(difficulty/2), 6);
+  for(let i=0;i<enemyCount && ptr < walkables.length;i++){
+    const p = walkables[ptr++];
+    // try to find a horizontal range for patrol
+    let left = p.x, right = p.x; while(left-1>0 && map[idx(left-1,p.y)]===1 && !solutionPath.has(idx(left-1,p.y))) left--; while(right+1<CELL_COUNT && map[idx(right+1,p.y)]===1 && !solutionPath.has(idx(right+1,p.y))) right++;
+    if(right-left<1){ // try vertical
+      let top = p.y, bottom = p.y; while(top-1>0 && map[idx(p.x,top-1)]===1 && !solutionPath.has(idx(p.x,top-1))) top--; while(bottom+1<CELL_COUNT && map[idx(p.x,bottom+1)]===1 && !solutionPath.has(idx(p.x,bottom+1))) bottom++;
+      if(bottom-top>=1){ enemies.push({x:p.x,y:p.y,dir:1,range:[top,bottom],axis:'v'}); }
+    } else { enemies.push({x:p.x,y:p.y,dir:1,range:[left,right],axis:'h'}); }
+  }
+}
+
+// Draw grid to DOM
+function drawGrid(){
+  gridEl.style.setProperty('--g', CELL_COUNT);
+  gridEl.innerHTML = '';
+  const cellSize = 660 / CELL_COUNT; gridEl.style.gridTemplateColumns = `repeat(${CELL_COUNT}, ${cellSize}px)`; gridEl.style.gridTemplateRows = `repeat(${CELL_COUNT}, ${cellSize}px)`;
+  for(let y=0;y<CELL_COUNT;y++){
+    for(let x=0;x<CELL_COUNT;x++){
+      const d = document.createElement('div'); d.className='cell';
+      if(map[idx(x,y)]===0){ d.style.background='#0a0a0a'; d.textContent=''; }
+      else{
+        // priority
+        if(player.x===x && player.y===y) d.textContent='🤠';
+        else if(!hasKey && key.x===x && key.y===y) d.textContent='🔑';
+        else if(door.x===x && door.y===y) d.textContent='🚪';
+        else if(enemies.some(en=>en.x===x && en.y===y)) d.textContent='⚡';
+        else if(spikes.some(s=>s.x===x && s.y===y)) d.textContent='🔺';
+        else if(blocks.some(b=>b.x===x && b.y===y)) d.textContent='🟥';
+        else if(coins.some(c=>c.x===x && c.y===y)) d.textContent='🟤';
+        else d.textContent='';
+      }
+      gridEl.appendChild(d);
+    }
+  }
+}
+
+// Enemy movement
+function stepEnemies(){ if(paused) return; for(const en of enemies){ if(en.axis==='h'){ en.x += en.dir; if(en.x > en.range[1] || en.x < en.range[0]){ en.dir *= -1; en.x += en.dir; } } else { en.y += en.dir; if(en.y > en.range[1] || en.y < en.range[0]){ en.dir *= -1; en.y += en.dir; } } if(en.x===player.x && en.y===player.y){ gameOver('Electrocuted ⚡'); return; } } drawGrid(); }
+
+// Controls
+window.addEventListener('keydown', e=>{
+  const keyMap = {ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
+  if(!running || paused) return; if(!keyMap[e.key]) return; e.preventDefault(); const [dx,dy] = keyMap[e.key]; const nx = player.x + dx, ny = player.y + dy; if(!inBounds(nx,ny) || map[idx(nx,ny)]===0) return; // boundary/wall
+  // cannot step into block
+  if(blocks.some(b=>b.x===nx&&b.y===ny)) return; player.x=nx; player.y=ny;
+  // pick key
+  if(!hasKey && player.x===key.x && player.y===key.y){ hasKey=true; showMessage('You picked up the key!'); }
+  // coins
+  const ci = coins.findIndex(c=>c.x===player.x&&c.y===player.y); if(ci>-1){ coins.splice(ci,1); updateScore(5); }
+  // spikes
+  if(spikes.some(s=>s.x===player.x&&s.y===player.y)){ gameOver('You died! Spikes got you.'); return; }
+  // enemies
+  if(enemies.some(en=>en.x===player.x&&en.y===player.y)){ gameOver('Electrocuted ⚡'); return; }
+  // door
+  if(player.x===door.x && player.y===door.y){ if(hasKey){ levelComplete(); } else { showMessage('Door is locked. Find the key 🔑.'); } }
+  drawGrid();
+});
+
+// Messages
+function showMessage(msg, duration=2000){ const overlay=document.getElementById('overlay'); document.getElementById('overlayText').textContent = msg; document.getElementById('countdown').textContent=''; overlay.style.display='flex'; const ok = document.getElementById('overlayOk'); ok.onclick = ()=>{ overlay.style.display='none'; }; if(duration>0){ setTimeout(()=>{ overlay.style.display='none'; }, duration); } }
+
+function updateScore(n){ score += n; document.getElementById('score').textContent = 'Score: '+score; }
+
+function gameOver(msg){ paused=true; clearInterval(enemyTimer); showMessage(msg+' Try again.', 1500); setTimeout(()=>{ loadLevel(level); running=false; paused=false; },1600); }
+
+function levelComplete(){ paused=true; clearInterval(enemyTimer); showMessage('🎉 Level cleared!', 1200); setTimeout(()=>{ level++; levelLabel.textContent=level; loadLevel(level); },1400); }
+
+// Start / Pause / Resume
+function startGame(){ if(running) return; startCountdown(()=>{ running=true; paused=false; enemyTimer = setInterval(stepEnemies, 300 - Math.min(200, level*10)); }); }
+function pauseGame(){ if(!running) return; paused=true; clearInterval(enemyTimer); }
+function resumeGame(){ if(!running) return; if(!paused) return; paused=false; enemyTimer = setInterval(stepEnemies, 300 - Math.min(200, level*10)); }
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+document.getElementById('resetAllBtn').addEventListener('click', ()=>{ if(confirm('Reset everything?')){ localStorage.removeItem('rachit_bg'); location.reload(); }});
+
+document.getElementById('overlayOk').addEventListener('click', ()=>{ document.getElementById('overlay').style.display='none'; });
+
+function startCountdown(cb){ const overlay = document.getElementById('overlay'); const cd = document.getElementById('countdown'); const txt = document.getElementById('overlayText'); overlay.style.display='flex'; txt.textContent='Get Ready'; let n=3; cd.textContent=n; const t = setInterval(()=>{ n--; if(n<=0){ clearInterval(t); overlay.style.display='none'; cb(); } else cd.textContent = n; },1000); }
+
+// Load level: generate maze, ensure solvable path, populate objects with difficulty
+function loadLevel(lev){ level = lev; levelLabel.textContent = level; // generate until solvable
+  let attempts=0; do{ generateMaze(); attempts++; } while(!findSolution() && attempts<10);
+  // increase difficulty parameter
+  const difficulty = Math.min(6, Math.floor(level/2)+1);
+  populateObjects(difficulty);
+  drawGrid();
+}
+
+function goHome(){ window.location.href='HomePagefinal.html'; }
+
+// init
+loadLevel(level);
+</script>
+</body>
+</html>
