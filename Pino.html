@@ -395,7 +395,9 @@ modeSel.addEventListener('change', ()=>{
 function resumeAudio() { if(audioCtx.state === 'suspended') audioCtx.resume(); window.removeEventListener('pointerdown', resumeAudio); window.removeEventListener('keydown', resumeAudio); }
 window.addEventListener('pointerdown', resumeAudio);
 window.addEventListener('keydown', resumeAudio);
+<script src="redirect.js"></script>
 
 </script>
 </body>
 </html>
+
