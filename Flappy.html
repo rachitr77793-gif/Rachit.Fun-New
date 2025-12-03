@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🐤 Flappy — Rachit.Fun</title>
+<style>
+  :root{--bg:#f7fbff;--card:#fff;--muted:#64748b;--edge:#000}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid rgba(0,0,0,0.06);background:#fff;position:sticky;top:0;z-index:40}
+  .brand-mini{display:flex;align-items:center;gap:8px;font-weight:700}
+  .controls{display:flex;gap:10px;align-items:center}
+  .btn{padding:.45rem .8rem;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:var(--card);cursor:pointer;font-weight:700}
+  .color-input{width:34px;height:28px;border-radius:6px;border:1px solid #ccc}
+  .container{max-width:900px;margin:24px auto;padding:14px;text-align:center}
+  .title{ text-align:center;margin:10px 0 }
+  .title h1{font-size:2.0rem;margin:0;font-weight:900}
+  .card {
+    max-width:760px;
+    margin:22px auto;
+    background:var(--card);
+    border-radius:14px;
+    padding:28px;
+    box-shadow: 0 20px 40px rgba(20,30,60,0.06);
+    text-align:center;
+  }
+  .small{color:var(--muted);margin-bottom:12px}
+  .controls-row{display:flex;gap:10px;justify-content:center;margin:10px 0;flex-wrap:wrap}
+  .start-btn{background:#6a5acd;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:800}
+  .game-box{width:360px;margin:20px auto;background:var(--card);padding:18px;border-radius:12px;border:4px solid var(--edge);box-shadow:0 8px 18px rgba(0,0,0,0.06)}
+  canvas{display:block;margin:0 auto;border-radius:10px;background:linear-gradient(#87ceeb,#bfe9ff);width:320px;height:520px;border:0}
+  .stats{margin-top:14px;font-weight:700;color:var(--muted)}
+  .countdownOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.28);z-index:120}
+  .countNum{font-size:6.5rem;color:white;font-weight:900;text-shadow:0 6px 18px rgba(0,0,0,0.6)}
+  .overlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center;z-index:130}
+  .modal{background:var(--card);padding:18px;border-radius:12px;min-width:300px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.2)}
+  .modal h3{margin:6px 0 12px 0}
+  .modal button{margin-top:12px;padding:8px 12px;border-radius:10px;border:none;background:#6a5acd;color:#fff;cursor:pointer}
+  footer{max-width:1100px;margin:28px auto;text-align:center;color:var(--muted);font-size:.95rem;padding-bottom:28px}
+  @media(max-width:520px){ .game-box{width:92%} canvas{width:92%;height:auto} .countNum{font-size:4.5rem} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand-mini">🎮 <span style="font-weight:800">Rachit.Fun</span></div>
+
+  <div style="display:flex;align-items:center;gap:12px">
+    <label style="display:flex;align-items:center;gap:6px;font-weight:700">BG <input id="bgColor" class="color-input" type="color" value="#f7fbff"></label>
+    <div class="controls">
+      <button id="homeBtn" class="btn">Home</button>
+      <button id="resetBtn" class="btn">Reset All</button>
+    </div>
+  </div>
+</div>
+
+<main class="container">
+  <div class="title"><h1>🐤 Rachit.Fun — Flappy</h1></div>
+
+  <div class="card">
+    <div class="small">Click / tap / press space to flap. Collect gold coins (+5).</div>
+
+    <div class="controls-row">
+      <button id="startBtn" class="start-btn">Start</button>
+      <button id="pauseBtn" class="btn">Pause</button>
+      <button id="resumeBtn" class="btn">Resume</button>
+      <button id="backBtn" class="btn">Back</button>
+    </div>
+
+    <div class="game-box">
+      <canvas id="gameCanvas" width="320" height="520"></canvas>
+    </div>
+
+    <div class="stats">
+      Score: <span id="scoreDisplay">0</span> &nbsp;•&nbsp; High: <span id="highDisplay">—</span>
+    </div>
+  </div>
+</main>
+
+<div id="countdown" class="countdownOverlay"><div class="countNum" id="countNum">3</div></div>
+
+<div id="overlay" class="overlay">
+  <div class="modal">
+    <h3>Game Over</h3>
+    <div style="font-weight:700">Score: <span id="resScore">0</span></div>
+    <div style="font-weight:700">High: <span id="resHigh">0</span></div>
+    <div style="margin-top:12px">
+      <button id="retryBtn">Retry</button>
+      <button id="closeBtn" style="margin-left:8px;background:#444;color:white">Close</button>
+    </div>
+  </div>
+</div>
+
+<footer><div style="max-width:1100px;margin:18px auto;text-align:center;color:var(--muted)">Rachit.Fun — made by Rachit Raikwar</div></footer>
+
+<script>
+/* Background Persistence */
+const bgColor = document.getElementById('bgColor');
+const savedBg = localStorage.getItem('rachit_bg');
+if(savedBg){ document.body.style.background = savedBg; bgColor.value = savedBg; }
+bgColor.addEventListener('input', e=>{ document.body.style.background = e.target.value; localStorage.setItem('rachit_bg', e.target.value); });
+
+/* FIXED — All navigation now goes to index.html */
+document.getElementById('homeBtn').onclick = ()=> window.location.href = 'index.html';
+document.getElementById('backBtn').onclick = ()=> window.location.href = 'index.html';
+document.getElementById('resetBtn').onclick = ()=>{
+  if(confirm('Reset everything?')){
+    localStorage.removeItem('rachit_bg');
+    localStorage.removeItem('rachit_scores');
+    window.location.href = 'index.html';
+  }
+};
+
+/* The rest of the game code remains UNCHANGED */
+const SCORE_KEY = 'rachit_scores';
+const STOP_KEY = 'rachit_stop_all';
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const countdownEl = document.getElementById('countdown');
+const countNum = document.getElementById('countNum');
+
+const overlay = document.getElementById('overlay');
+const resScore = document.getElementById('resScore');
+const resHigh = document.getElementById('resHigh');
+
+const retryBtn = document.getElementById('retryBtn');
+const closeBtn = document.getElementById('closeBtn');
+
+const scoreDisplay = document.getElementById('scoreDisplay');
+const highDisplay = document.getElementById('highDisplay');
+
+let W = canvas.width, H = canvas.height;
+let bird, pipes, coins, frame, running, paused, score, high, pipeCount;
+
+const MAX_SCORE = 999;
+const PIPE_SPEED = 3.2;
+const GRAVITY = 0.7;
+const JUMP = -12;
+
+(function loadHigh(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SCORE_KEY) || '{}');
+    high = s.flappy ? (s.flappy.score||0) : 0;
+  }catch(e){ high = 0; }
+  highDisplay.textContent = high || '—';
+})();
+
+function resetState(){
+  bird = { x:80, y:H/2, r:14, vy:0 };
+  pipes = [];
+  coins = [];
+  frame = 0;
+  pipeCount = 0;
+  score = 0;
+  running = false;
+  paused = false;
+  scoreDisplay.textContent = score;
+}
+
+function spawnPipe(){
+  pipeCount++;
+  const gap = Math.floor(Math.random()*60)+150;
+  const top = Math.floor(Math.random()*(H-gap-120))+40;
+  const w = 64;
+  const x = W+10;
+  const bottom = top + gap;
+  pipes.push({ x, w, top, bottom, passed:false });
+
+  if(pipeCount % 5 === 0){
+    const coinY = top + gap/2;
+    coins.push({ x:x+w/2, y:coinY, r:8, taken:false });
+  }
+}
+
+function drawBird(){
+  ctx.beginPath();
+  ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI*2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+}
+
+function drawPipes(){
+  ctx.fillStyle = '#1f7a3a';
+  pipes.forEach(p=>{
+    ctx.fillRect(p.x,0,p.w,p.top);
+    ctx.fillRect(p.x,p.bottom,p.w,H-p.bottom);
+  });
+}
+
+function drawCoins(){
+  coins.forEach(c=>{
+    if(c.taken) return;
+    ctx.beginPath();
+    ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
+    ctx.fillStyle='#ffd54f';
+    ctx.fill();
+  });
+}
+
+function drawScore(){
+  ctx.fillStyle='#000';
+  ctx.font='20px Inter';
+  ctx.fillText(`Score: ${score}`,12,28);
+}
+
+function update(){
+  if(!running || paused) return;
+
+  frame++;
+  bird.vy += GRAVITY;
+  bird.y += bird.vy;
+
+  if(bird.y + bird.r >= H-6){ gameOver(); return; }
+  if(bird.y - bird.r <= 0){ bird.y = bird.r+2; }
+
+  if(frame % 110 === 0) spawnPipe();
+
+  for(let i = pipes.length-1; i>=0; i--){
+    const p = pipes[i];
+    p.x -= PIPE_SPEED;
+
+    if(!p.passed && p.x + p.w < bird.x - bird.r){
+      p.passed = true;
+      addScore(1);
+    }
+
+    if(bird.x + bird.r > p.x && bird.x - bird.r < p.x+p.w){
+      if(bird.y - bird.r < p.top || bird.y + bird.r > p.bottom){
+        gameOver();
+        return;
+      }
+    }
+
+    if(p.x + p.w < -50) pipes.splice(i,1);
+  }
+
+  for(let j = coins.length-1; j>=0; j--){
+    const c = coins[j];
+    c.x -= PIPE_SPEED;
+
+    if(!c.taken && Math.hypot(bird.x-c.x, bird.y-c.y) < bird.r+c.r){
+      c.taken = true;
+      addScore(5);
+    }
+
+    if(c.x < -40) coins.splice(j,1);
+  }
+
+  ctx.fillStyle='#87ceeb';
+  ctx.fillRect(0,0,W,H);
+
+  drawPipes();
+  drawCoins();
+  drawBird();
+  drawScore();
+
+  requestAnimationFrame(update);
+}
+
+function addScore(n){
+  score = Math.min(MAX_SCORE, score+n);
+  scoreDisplay.textContent=score;
+  if(score > high){ high = score; highDisplay.textContent = high; saveHigh(); }
+}
+
+function saveHigh(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SCORE_KEY)||'{}');
+    s.flappy = {score:high};
+    localStorage.setItem(SCORE_KEY, JSON.stringify(s));
+  }catch(e){}
+}
+
+function flap(){ if(running && !paused) bird.vy = JUMP; }
+
+startBtn.onclick = async ()=>{
+  if(running) return;
+  await runCountdown();
+  resetState();
+  running = true;
+  spawnPipe();
+  requestAnimationFrame(update);
+};
+
+pauseBtn.onclick = ()=> paused = true;
+resumeBtn.onclick = ()=> { if(running){ paused=false; requestAnimationFrame(update); } };
+
+retryBtn.onclick = ()=>{ overlay.style.display='none'; startBtn.click(); };
+
+/* FIXED: Go home on Close */
+closeBtn.onclick = ()=> window.location.href='index.html';
+
+window.onkeydown = e=>{ if(e.code==='Space'){ e.preventDefault(); flap(); } };
+canvas.onmousedown = ()=> flap();
+canvas.ontouchstart = e=>{ e.preventDefault(); flap(); };
+
+function runCountdown(){
+  return new Promise(resolve=>{
+    countdownEl.style.display='flex';
+    countNum.textContent='3';
+    let n=3;
+    const t=setInterval(()=>{
+      n--;
+      if(n<=0){ clearInterval(t); countdownEl.style.display='none'; resolve(); }
+      else countNum.textContent=n;
+    },700);
+  });
+}
+
+function gameOver(){
+  running=false;
+  paused=false;
+  saveHigh();
+  resScore.textContent=score;
+  resHigh.textContent=high;
+  overlay.style.display='flex';
+}
+
+resetState();
+</script>
+</body>
+</html>

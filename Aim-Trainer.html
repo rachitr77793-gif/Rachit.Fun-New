@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aim Trainer – Rachit.Fun</title>
+
+<style>
+  :root{--card:#fff}
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+    background:#f7fbff;
+    color:#071133;
+  }
+
+  /* ---------------------- TOPBAR ---------------------- */
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 20px;
+    background:transparent;
+    border-bottom:1px solid rgba(0,0,0,0.03);
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+  .left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-weight:800;
+  }
+  .left .logo{font-size:20px}
+  .left .site{font-size:20px}
+
+  .right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .color-picker{
+    width:36px;
+    height:28px;
+    border-radius:8px;
+    border:1px solid #ccc;
+    padding:0;
+  }
+  .btn{
+    background:var(--card);
+    border:1px solid rgba(0,0,0,0.06);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  /* ---------------------- AIM TRAINER AREA ---------------------- */
+  .center{text-align:center;margin-top:20px;}
+  #aimArea{
+    width:400px;
+    height:400px;
+    border:1px solid #ccc;
+    margin:20px auto;
+    position:relative;
+    background:white;
+    overflow:hidden;
+  }
+  #countdown{
+    font-size:2rem;
+    font-weight:800;
+    margin-top:10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ----------------- TOP BAR ----------------- -->
+<header class="topbar">
+  <div class="left">
+    <div class="logo">🎮</div>
+    <div class="site">Rachit.Fun</div>
+  </div>
+
+  <div class="right">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+      BG
+      <input id="bgPicker" class="color-picker" type="color" value="#f7fbff" />
+    </label>
+
+    <button class="btn" id="homeBtn">Home</button>
+    <button class="btn" id="resetAllBtn">Reset All</button>
+  </div>
+</header>
+
+
+<!-- ----------------- AIM TRAINER ----------------- -->
+<div class="center">
+  <h1>🎯 AIM TRAINER</h1>
+  <p>Choose Duration:</p>
+
+  <button class="btn" onclick="startAim(5)">5 seconds</button>
+  <button class="btn" onclick="startAim(10)">10 seconds</button>
+
+  <div id="countdown"></div>
+</div>
+
+<div id="aimArea"></div>
+
+<p class="center">Score: <span id="aimScore">0</span></p>
+
+
+<script>
+/* ---------------------- BG COLOR SYSTEM ---------------------- */
+const BG_KEY='rachit_bg';
+const bgPicker=document.getElementById('bgPicker');
+const saved=localStorage.getItem(BG_KEY);
+if(saved){
+  document.body.style.background=saved;
+  bgPicker.value=saved;
+}
+bgPicker.addEventListener('input',e=>{
+  document.body.style.background=e.target.value;
+  localStorage.setItem(BG_KEY,e.target.value);
+});
+
+/* ---------------------- FIXED HOME BUTTON ---------------------- */
+document.getElementById('homeBtn').onclick=()=>{
+  window.location.href="index.html";
+};
+
+document.getElementById('resetAllBtn').onclick=()=>{
+  if(confirm("Reset everything?")){
+    localStorage.removeItem(BG_KEY);
+    location.reload();
+  }
+};
+
+
+/* ---------------------- AIM TRAINER GAME ---------------------- */
+let aimScore=0;
+let gameInterval;
+let gameRunning=false;
+
+function startAim(duration){
+  if(gameRunning) return;
+  gameRunning=true;
+  aimScore=0;
+  document.getElementById("aimScore").textContent=0;
+
+  const cd=document.getElementById("countdown");
+  cd.textContent="3";
+
+  let c=3;
+  const cInt=setInterval(()=>{
+    c--;
+    cd.textContent=c===0 ? "GO!" : c;
+    if(c===0){
+      setTimeout(()=>{cd.textContent="";},500);
+      clearInterval(cInt);
+      startGame(duration);
+    }
+  },1000);
+}
+
+function startGame(duration){
+  const aimArea=document.getElementById("aimArea");
+  aimArea.innerHTML="";
+
+  function spawn(){
+    aimArea.innerHTML="";
+    const t=document.createElement("div");
+    t.style.width="35px";
+    t.style.height="35px";
+    t.style.borderRadius="50%";
+    t.style.background="red";
+    t.style.position="absolute";
+    t.style.top=Math.random()*(365)+"px";
+    t.style.left=Math.random()*(365)+"px";
+    t.style.cursor="pointer";
+
+    t.onclick=()=>{
+      aimScore++;
+      document.getElementById("aimScore").textContent=aimScore;
+      spawn();
+    };
+
+    aimArea.appendChild(t);
+  }
+
+  spawn();
+
+  gameInterval=setTimeout(()=>{
+    aimArea.innerHTML="";
+    alert("Time's up! Score: " + aimScore);
+    gameRunning=false;
+  }, duration*1000);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rachit.Fun — Tic Tac Toe</title>
+<style>
+  :root{--card:#fff}
+  *{box-sizing:border-box;user-select:none}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:#f7fbff;color:#071133}
+  /* EXACT TASKBAR - DO NOT CHANGE */
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:transparent;border-bottom:1px solid rgba(0,0,0,0.03);position:sticky;top:0;z-index:50}
+  .left{display:flex;align-items:center;gap:12px;font-weight:800}
+  .left .logo{font-size:20px}
+  .left .site{font-size:20px}
+  .right{display:flex;align-items:center;gap:10px}
+  .color-picker{width:36px;height:28px;border-radius:8px;border:1px solid #ccc;padding:0;cursor:pointer}
+  .btn{background:var(--card);border:1px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+  .btn.primary{background:linear-gradient(90deg,#0ea5a3,#06b6b4);color:#fff;border:none}
+  .wrap{max-width:1100px;margin:18px auto;padding:12px}
+  .panel{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+  .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(12,15,30,0.06);min-width:320px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .small{font-size:14px;color:#334155}
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}
+  .cell{
+    width:110px;height:110px;background:#ffffff;border:2px solid rgba(7,16,34,0.08);
+    border-radius:12px;font-size:56px;font-weight:900;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:transform .08s, box-shadow .08s;
+    user-select:none;
+  }
+  .cell:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(9,25,51,0.06)}
+  .cell.disabled{cursor:default;opacity:0.7;transform:none;box-shadow:none}
+  .cell.win{background:linear-gradient(180deg,#fffbeb,#fff7ed);border-color:#f59e0b}
+  .controls-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .row{display:flex;gap:8px;align-items:center}
+  .label{font-weight:800;color:#334155}
+  select.toggle{padding:8px;border-radius:10px;border:1px solid #e6e9ef;background:#fff}
+  .text-input{padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);min-width:220px}
+  #status{margin-top:12px;font-weight:800;color:#071133;text-align:center}
+  #footerNote{margin-top:10px;color:#64748b;font-size:13px;text-align:center}
+  @media (max-width:900px){ .cell{width:86px;height:86px;font-size:44px} .board{gap:8px} .card{width:92%} }
+  @media (max-width:480px){ .cell{width:66px;height:66px;font-size:34px} .text-input{min-width:120px} }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="left">
+      <div class="logo">🎮</div>
+      <div class="site">Rachit.Fun</div>
+    </div>
+
+    <div class="right">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+        BG
+        <input id="bgPicker" class="color-picker" type="color" value="#f7fbff" />
+      </label>
+
+      <button class="btn" id="homeBtn">Home</button>
+      <button class="btn" id="resetAllBtn">Reset All</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="panel">
+      <div class="card" id="gameCard" style="max-width:520px">
+        <div class="controls-top">
+          <div class="label" style="font-size:20px">Tic Tac Toe</div>
+        </div>
+
+        <div class="controls" style="margin-top:12px">
+          <button class="btn primary" id="startBtn">Start</button>
+          <button class="btn" id="pauseBtn" disabled>Pause</button>
+          <button class="btn" id="resumeBtn" disabled>Resume</button>
+          <button class="btn" id="resetBtn">Reset</button>
+
+          <label class="small" style="display:flex;align-items:center;gap:8px;margin-left:6px">
+            Mode
+            <select id="mode" class="toggle" title="Choose AI or 2-Player">
+              <option value="ai">AI</option>
+              <option value="pvp">2-Player</option>
+            </select>
+          </label>
+
+          <label class="small" id="difficultyLabel" style="display:none;align-items:center;gap:8px">
+            Difficulty
+            <select id="difficulty" class="toggle">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="display:flex;justify-content:center;margin-top:10px">
+          <input id="note" class="text-input" placeholder="Text / Player name (optional)" />
+        </div>
+
+        <div id="status">Press Start to begin</div>
+
+        <div class="board" id="board" aria-label="tic tac toe board" style="margin-top:18px">
+          <div class="cell" data-id="0"></div>
+          <div class="cell" data-id="1"></div>
+          <div class="cell" data-id="2"></div>
+          <div class="cell" data-id="3"></div>
+          <div class="cell" data-id="4"></div>
+          <div class="cell" data-id="5"></div>
+          <div class="cell" data-id="6"></div>
+          <div class="cell" data-id="7"></div>
+          <div class="cell" data-id="8"></div>
+        </div>
+
+        <div id="footerNote">Tap a cell to play. AI moves automatically in AI mode.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------- TASKBAR BG Persistence ---------- */
+const BG_KEY = 'rachit_bg';
+const bgPicker = document.getElementById('bgPicker');
+const savedBG = localStorage.getItem(BG_KEY);
+if (savedBG) { document.body.style.background = savedBG; bgPicker.value = savedBG; }
+bgPicker.addEventListener('input', e => { document.body.style.background = e.target.value; localStorage.setItem(BG_KEY, e.target.value); });
+document.getElementById('homeBtn').addEventListener('click', ()=> window.location.href = 'index.html');
+document.getElementById('resetAllBtn').addEventListener('click', ()=> { if(confirm('Reset everything?')){ localStorage.removeItem(BG_KEY); location.reload(); } });
+
+/* ---------- Game Logic ---------- */
+const cells = Array.from(document.querySelectorAll('.cell'));
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resumeBtn = document.getElementById('resumeBtn');
+const resetBtn = document.getElementById('resetBtn');
+const modeSel = document.getElementById('mode');
+const difficultyLabel = document.getElementById('difficultyLabel');
+const difficultySel = document.getElementById('difficulty');
+const statusEl = document.getElementById('status');
+const noteInput = document.getElementById('note');
+
+let board = ["","","","","","","","",""];
+let turn = 'X'; // X always starts
+let running = false;
+let paused = false;
+let mode = 'ai';
+let difficulty = 'medium';
+let winner = null;
+let aiThinking = false;
+
+// winning combos
+const wins = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+function resetBoardVisual(){
+  cells.forEach(c=>{
+    c.textContent = '';
+    c.classList.remove('disabled','win');
+  });
+}
+
+// utility
+function setStatus(txt){
+  statusEl.textContent = txt;
+}
+function enableControlsForRunning(val){
+  pauseBtn.disabled = !val;
+  resumeBtn.disabled = true;
+  startBtn.disabled = val;
+}
+
+// start game: prepares and enables board
+function startGame(){
+  board = ["","","","","","","","",""];
+  turn = 'X';
+  winner = null;
+  paused = false;
+  running = true;
+  aiThinking = false;
+  resetBoardVisual();
+  setStatus(`Player ${turn}'s turn`);
+  enableControlsForRunning(true);
+
+  // focus optional note input for names (not mandatory)
+  try{ noteInput.focus(); } catch(e){}
+  // if AI starts and AI is X on difficulty? We'll let human always be X (first) and AI as O.
+  // If you want AI to start, change turn accordingly. Here, X starts (human or player1).
+  if(mode === 'ai' && turn === 'O'){
+    // handle AI start if we later decide O starts
+    aiMove();
+  }
+}
+
+// pause
+function pauseGame(){
+  if(!running || paused) return;
+  paused = true;
+  setStatus('Paused');
+  pauseBtn.disabled = true;
+  resumeBtn.disabled = false;
+  cells.forEach(c=>c.classList.add('disabled'));
+}
+
+// resume
+function resumeGame(){
+  if(!running || !paused) return;
+  paused = false;
+  setStatus(`Player ${turn}'s turn`);
+  pauseBtn.disabled = false;
+  resumeBtn.disabled = true;
+  cells.forEach(c=>c.classList.remove('disabled'));
+  // if it was AI's turn resume AI
+  if(mode === 'ai' && turn === 'O') aiMove();
+}
+
+// reset (immediate)
+function doReset(){
+  running = false; paused = false; winner = null; aiThinking = false;
+  board = ["","","","","","","","",""];
+  resetBoardVisual();
+  setStatus('Press Start to begin');
+  startBtn.disabled = false;
+  pauseBtn.disabled = true;
+  resumeBtn.disabled = true;
+}
+
+// helpers to check win/draw
+function checkWin(bd, player){
+  return wins.some(combo => combo.every(i => bd[i] === player));
+}
+function winningCombo(bd, player){
+  return wins.find(combo => combo.every(i => bd[i] === player)) || null;
+}
+function isDraw(bd){
+  return bd.every(c => c !== '');
+}
+
+// apply a move (index, player) — returns true if move accepted
+function applyMove(idx, player){
+  if(board[idx] !== '' || winner || !running || paused) return false;
+  board[idx] = player;
+  cells[idx].textContent = player;
+  // check win
+  if(checkWin(board, player)){
+    winner = player;
+    const combo = winningCombo(board, player);
+    if(combo) combo.forEach(i => cells[i].classList.add('win'));
+    setStatus(`Player ${player} wins!`);
+    running = false;
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = true;
+    startBtn.disabled = false;
+    return true;
+  }
+  // check draw
+  if(isDraw(board)){
+    setStatus(`It's a draw!`);
+    running = false;
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = true;
+    startBtn.disabled = false;
+    return true;
+  }
+  // next turn
+  turn = (player === 'X') ? 'O' : 'X';
+  setStatus(`Player ${turn}'s turn`);
+  return true;
+}
+
+/* ---------------- Player click handling ---------------- */
+cells.forEach(cell=>{
+  cell.addEventListener('click', () => {
+    if(!running || paused) return;
+    if(cell.classList.contains('disabled')) return;
+    const id = Number(cell.getAttribute('data-id'));
+    // if AI mode and it's AI's turn, block clicks
+    if(mode === 'ai' && turn === 'O') return;
+    const ok = applyMove(id, turn);
+    if(!ok) return;
+    if(running && mode === 'ai' && turn === 'O'){
+      // AI moves after a tiny delay for feel
+      setTimeout(()=> aiMove(), 240);
+    }
+  });
+});
+
+/* ---------------- AI Implementation ---------------- */
+// Easy: random available move
+function aiEasyMove(){
+  const avail = board.map((v,i)=> v === '' ? i : -1).filter(i=>i!==-1);
+  if(avail.length === 0) return null;
+  return avail[Math.floor(Math.random()*avail.length)];
+}
+
+// Medium: win if possible, block if necessary, else random
+function aiMediumMove(){
+  // try win
+  for(let i=0;i<9;i++){
+    if(board[i] === ''){
+      const copy = board.slice(); copy[i] = 'O';
+      if(checkWin(copy, 'O')) return i;
+    }
+  }
+  // try block X win
+  for(let i=0;i<9;i++){
+    if(board[i] === ''){
+      const copy = board.slice(); copy[i] = 'X';
+      if(checkWin(copy, 'X')) return i;
+    }
+  }
+  // else random
+  return aiEasyMove();
+}
+
+// Hard: Minimax
+function aiHardMove(){
+  // minimax for 'O' (AI), maximizing O, minimizing X
+  function minimax(bd, player){
+    if(checkWin(bd, 'O')) return {score: 10};
+    if(checkWin(bd, 'X')) return {score: -10};
+    if(isDraw(bd)) return {score: 0};
+
+    const moves = [];
+    for(let i=0;i<9;i++){
+      if(bd[i] === ''){
+        const move = {};
+        move.index = i;
+        bd[i] = player;
+        const result = minimax(bd, player === 'O' ? 'X' : 'O');
+        move.score = result.score;
+        bd[i] = '';
+        moves.push(move);
+      }
+    }
+
+    // choose best move
+    if(player === 'O'){ // maximize
+      let best = {score:-Infinity};
+      for(let m of moves) if(m.score > best.score) best = m;
+      return best;
+    } else { // minimize
+      let best = {score:Infinity};
+      for(let m of moves) if(m.score < best.score) best = m;
+      return best;
+    }
+  }
+
+  const bdCopy = board.slice();
+  const best = minimax(bdCopy, 'O');
+  // fallback
+  if(!best || typeof best.index !== 'number'){
+    return aiMediumMove() || aiEasyMove();
+  }
+  return best.index;
+}
+
+function aiChooseMove(){
+  if(difficulty === 'easy') return aiEasyMove();
+  if(difficulty === 'medium') return aiMediumMove();
+  return aiHardMove();
+}
+
+// Execute AI move
+function aiMove(){
+  if(!running || paused || winner) return;
+  aiThinking = true;
+  setStatus('AI thinking...');
+  // short delay for realism
+  setTimeout(()=>{
+    const idx = aiChooseMove();
+    if(idx == null){ aiThinking = false; return; }
+    applyMove(idx, 'O');
+    aiThinking = false;
+  }, difficulty === 'hard' ? 350 : 150);
+}
+
+/* ---------- UI events ---------- */
+startBtn.addEventListener('click', ()=>{
+  mode = modeSel.value;
+  difficulty = difficultySel.value;
+  // show difficulty only for AI (handled by change handler too)
+  startGame();
+});
+
+pauseBtn.addEventListener('click', pauseGame);
+resumeBtn.addEventListener('click', resumeGame);
+
+resetBtn.addEventListener('click', ()=>{
+  if(confirm('Reset the board?')) doReset();
+});
+
+/* Mode/difficulty UI behavior: Difficulty visible only when AI chosen */
+modeSel.addEventListener('change', (e)=>{
+  mode = e.target.value;
+  if(mode === 'ai'){
+    difficultyLabel.style.display = 'inline-flex';
+  } else {
+    difficultyLabel.style.display = 'none';
+  }
+  // if switched to AI and it's AI's turn and running, trigger AI
+  if(mode === 'ai' && running && turn === 'O' && !paused) aiMove();
+});
+
+/* Difficulty selector change */
+difficultySel.addEventListener('change', (e)=>{
+  difficulty = e.target.value;
+});
+
+/* Keyboard shortcuts */
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'p' || e.key === 'P'){ if(!paused) pauseGame(); else resumeGame(); }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r'){ e.preventDefault(); doReset(); }
+});
+
+/* Initialize UI defaults */
+(function init(){
+  // difficulty only visible for AI initially
+  if(modeSel.value === 'ai') difficultyLabel.style.display = 'inline-flex';
+  else difficultyLabel.style.display = 'none';
+  pauseBtn.disabled = true;
+  resumeBtn.disabled = true;
+  setStatus('Press Start to begin');
+  // mobile usability: disable pointer events during pause etc handled by class
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🎮 Rachit.Fun</title>
+<style>
+  :root{--bg:#f7fbff;--card:#fff;--muted:#64748b;--edge:#000}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a}
+
+  .header { display:flex; align-items:center; justify-content:space-between; padding:8px 18px;
+    border-bottom:1px solid rgba(0,0,0,0.06) }
+
+  .brand { display:flex; align-items:center; gap:8px; font-weight:800; font-size:20px; }
+
+  .controls { display:flex; gap:10px; align-items:center; }
+
+  .btn {
+    padding:.45rem .8rem;
+    border-radius:8px;
+    border:1px solid rgba(0,0,0,0.06);
+    background:var(--card);
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  .small-input {
+    width:36px; height:26px; border-radius:6px;
+    border:1px solid #bbb;
+  }
+
+  .container { max-width:1100px; margin:18px auto; padding:14px; text-align:center; }
+  .title { margin:14px 0; }
+  .title h1 { font-size:2.2rem; margin:0; font-weight:900; display:inline-flex; gap:8px; }
+
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:18px; justify-content:center;
+    margin-top:18px; width:100%;
+  }
+  @media(max-width:980px) {
+    .grid { grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
+  }
+
+  .card {
+    display:flex; align-items:center; justify-content:center;
+    gap:10px; height:64px; padding:0 18px;
+    border-radius:14px; background:var(--card);
+    border:4px solid var(--edge);
+    text-decoration:none; color:inherit;
+    font-weight:600; font-size:1.05rem;
+    transition:transform .08s;
+  }
+  .card:active { transform:translateY(1px); }
+  .cardEmoji { font-size:1.25rem; margin-right:6px; }
+
+  footer {
+    max-width:1100px; margin:28px auto; text-align:center;
+    color:var(--muted); font-size:.95rem; padding-bottom:28px;
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">🎮 Rachit.Fun</div>
+
+  <div class="controls">
+    <label>BG <input id="bgColor" class="small-input" type="color" value="#f7fbff"></label>
+    <button id="playMusic" class="btn">Play Music</button>
+    <button id="scoresBtn" class="btn">Scores</button>
+    <button id="resetBtn" class="btn">Reset All</button>
+  </div>
+</header>
+
+<main class="container">
+  <div class="title"><h1>🎮 Rachit.Fun</h1></div>
+
+  <!-- ⭐ ALL FIXED GAME LINKS ⭐ -->
+  <div id="gamesGrid" class="grid">
+
+    <a class="card" href="Clicker.html"><span class="cardEmoji">🖱️</span>Clicker</a>
+    <a class="card" href="Draw.html"><span class="cardEmoji">✏️</span>Draw</a>
+    <a class="card" href="Snake.html"><span class="cardEmoji">🐍</span>Snake</a>
+    <a class="card" href="Pong.html"><span class="cardEmoji">🏓</span>Pong</a>
+
+    <a class="card" href="Memory-Match.html"><span class="cardEmoji">🧠</span>Memory Match</a>
+    <a class="card" href="Minesweeper.html"><span class="cardEmoji">💣</span>Minesweeper</a>
+    <a class="card" href="Maze-Scape.html"><span class="cardEmoji">🌀</span>Maze Escape</a>
+    <a class="card" href="Pixel-Art.html"><span class="cardEmoji">🟦</span>Pixel Art</a>
+
+    <a class="card" href="Pino.html"><span class="cardEmoji">🎹</span>Pino</a>
+    <a class="card" href="Emoji-Rain.html"><span class="cardEmoji">🌧️</span>Emoji Rain</a>
+    <a class="card" href="Tic-Tac-Toe.html"><span class="cardEmoji">⭕</span>Tic Tac Toe</a>
+    <a class="card" href="Flappy.html"><span class="cardEmoji">🐤</span>Flappy</a>
+
+    <a class="card" href="2048.html"><span class="cardEmoji">🔢</span>2048</a>
+    <a class="card" href="Tetris.html"><span class="cardEmoji">🧩</span>Tetris</a>
+    <a class="card" href="Aim-Trainer.html"><span class="cardEmoji">🎯</span>Aim Trainer</a>
+    <a class="card" href="Dino-Run.html"><span class="cardEmoji">🦖</span>Dino Run</a>
+
+    <a class="card" href="Car-Race.html"><span class="cardEmoji">🚗</span>Car Race</a>
+    <a class="card" href="Brick-Breaker.html"><span class="cardEmoji">🧱</span>Brick Breaker</a>
+    <a class="card" href="Space-Shooter.html"><span class="cardEmoji">🚀</span>Space Shooter</a>
+    <a class="card" href="FastTap.html"><span class="cardEmoji">⚡</span>Fast Tap</a>
+
+  </div>
+</main>
+
+<footer>
+  <div>Rachit.Fun — made by Rachit Raikwar</div>
+</footer>
+
+</body>
+</html>

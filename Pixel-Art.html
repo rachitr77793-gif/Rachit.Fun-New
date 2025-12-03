@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rachit.Fun — Pixel Art (32×32)</title>
+<style>
+  :root{--card:#fff}
+  *{box-sizing:border-box;touch-action:none}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:#f7fbff;color:#071133}
+  /* TASKBAR (exact style) */
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:transparent;border-bottom:1px solid rgba(0,0,0,0.03);position:sticky;top:0;z-index:50}
+  .left{display:flex;align-items:center;gap:12px;font-weight:800}
+  .left .logo{font-size:20px}
+  .left .site{font-size:20px}
+  .right{display:flex;align-items:center;gap:10px}
+  .color-picker{width:36px;height:28px;border-radius:8px;border:1px solid #ccc;padding:0;cursor:pointer}
+  .btn{background:var(--card);border:1px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+  .btn.primary{background:linear-gradient(90deg,#0ea5a3,#06b6b4);color:#fff;border:none}
+  .wrap{max-width:1100px;margin:18px auto;padding:12px}
+  .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(12,15,30,0.06)}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .label{font-weight:800;color:#334155}
+  .text-input{padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);min-width:220px}
+  #status{margin-top:10px;font-weight:800;color:#071133;text-align:center}
+  /* pixel canvas area */
+  .canvas-wrap{display:flex;justify-content:center;align-items:center;padding:12px;margin-top:12px}
+  .pixel-canvas{
+    background:#ffffff;
+    border-radius:10px;
+    padding:12px;
+    border:1px solid rgba(0,0,0,0.04);
+    box-shadow:0 8px 30px rgba(9,25,51,0.04);
+  }
+  .pixel-grid {
+    image-rendering: pixelated;
+    display:block;
+    background: #fff;
+    touch-action: none;
+    cursor:crosshair;
+    /* will set width by JS for responsiveness */
+  }
+  .small{font-size:13px;color:#64748b}
+  .swatch{ width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);cursor:pointer;display:inline-block}
+  .toggle{padding:8px;border-radius:10px;border:1px solid #e6e9ef;background:#fff}
+  @media (max-width:900px){ .card{width:92%} }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="left">
+      <div class="logo">🎮</div>
+      <div class="site">Rachit.Fun</div>
+    </div>
+
+    <div class="right">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+        BG
+        <input id="bgPicker" class="color-picker" type="color" value="#f7fbff" />
+      </label>
+
+      <button class="btn" id="homeBtn">Home</button>
+      <button class="btn" id="resetAllBtn">Reset All</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card" id="card">
+      <div class="controls" role="toolbar" aria-label="pixel controls">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="label">Pixel size</div>
+          <select id="gridSize" class="toggle" title="Pixel grid">
+            <option value="16">16×16</option>
+            <option value="24">24×24</option>
+            <option value="32" selected>32×32</option>
+            <option value="48">48×48</option>
+          </select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="label">Brush</div>
+          <input id="brushSize" type="range" min="1" max="6" value="1" />
+          <div id="brushLabel" class="small">1</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="label">Color</div>
+          <div class="swatch" id="quickBlack" data-color="#000000" style="background:#000000"></div>
+          <div class="swatch" id="quickRed" data-color="#ef4444" style="background:#ef4444"></div>
+          <div class="swatch" id="quickAqua" data-color="#06b6d4" style="background:#06b6d4"></div>
+          <input id="colorPicker" class="color-picker" type="color" value="#000000" />
+        </div>
+
+        <button class="btn" id="eraserBtn">Eraser</button>
+
+        <button class="btn" id="gridToggle">Grid: ON</button>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn" id="undoBtn" disabled>Undo</button>
+          <button class="btn" id="redoBtn" disabled>Redo</button>
+        </div>
+
+        <button class="btn" id="clearBtn">Clear</button>
+        <button class="btn primary" id="saveBtn">Save</button>
+      </div>
+
+      <div style="display:flex;justify-content:center;margin-top:10px">
+        <input id="note" class="text-input" placeholder="Text / Title (optional)" />
+      </div>
+
+      <div id="status">Ready — paint pixels</div>
+
+      <div class="canvas-wrap">
+        <div class="pixel-canvas" id="pixelCard">
+          <!-- we'll create <canvas> via JS -->
+          <canvas id="pixelCanvas" class="pixel-grid" width="512" height="512" aria-label="Pixel art canvas"></canvas>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;text-align:center" class="small">Tip: drag to paint. Use Eraser to clear pixels. Save exports a crisp PNG.</div>
+    </div>
+  </main>
+
+<script>
+/* ---------- TASKBAR BG Persistence ---------- */
+const BG_KEY = 'rachit_bg';
+const bgPicker = document.getElementById('bgPicker');
+const savedBG = localStorage.getItem(BG_KEY);
+if (savedBG) { document.body.style.background = savedBG; bgPicker.value = savedBG; }
+bgPicker.addEventListener('input', e => { document.body.style.background = e.target.value; localStorage.setItem(BG_KEY, e.target.value); });
+document.getElementById('homeBtn').addEventListener('click', ()=> window.location.href = 'index.html');
+document.getElementById('resetAllBtn').addEventListener('click', ()=> { if(confirm('Reset everything?')){ localStorage.removeItem(BG_KEY); location.reload(); } });
+
+/* ---------- Pixel Art App ---------- */
+const canvas = document.getElementById('pixelCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const gridSizeSel = document.getElementById('gridSize');
+const brushSizeEl = document.getElementById('brushSize');
+const brushLabel = document.getElementById('brushLabel');
+const colorPicker = document.getElementById('colorPicker');
+const quickBlack = document.getElementById('quickBlack');
+const quickRed = document.getElementById('quickRed');
+const quickAqua = document.getElementById('quickAqua');
+const eraserBtn = document.getElementById('eraserBtn');
+const gridToggle = document.getElementById('gridToggle');
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+const clearBtn = document.getElementById('clearBtn');
+const saveBtn = document.getElementById('saveBtn');
+const statusEl = document.getElementById('status');
+
+let GRID = 32;             // logical grid (32x32 chosen)
+let PIXEL_CANVAS = 512;    // logical pixel canvas resolution (square)
+let pixelSize = PIXEL_CANVAS / GRID;
+let brush = 1;             // brush size in pixels
+let color = colorPicker.value;
+let tool = 'pen';          // 'pen' or 'eraser'
+let showGrid = true;
+
+// We store image as Uint32-like 2D array of hex color strings or '' for transparent/background white
+let pixels = create2D(GRID, GRID, ''); // initial blank
+let undoStack = [];
+let redoStack = [];
+const MAX_STACK = 50;
+
+/* init canvas and draw background */
+function initCanvas(){
+  // set logical canvas size
+  canvas.width = PIXEL_CANVAS;
+  canvas.height = PIXEL_CANVAS;
+  // set display size responsive (scale to fit card)
+  adaptCanvasScale();
+
+  // initial blank white background
+  clearPixels();
+  pushState();
+  draw();
+}
+function create2D(cols, rows, v=''){
+  const a = [];
+  for(let y=0;y<rows;y++){
+    a[y] = [];
+    for(let x=0;x<cols;x++) a[y][x] = v;
+  }
+  return a;
+}
+function clearPixels(){
+  for(let y=0;y<GRID;y++) for(let x=0;x<GRID;x++) pixels[y][x] = '';
+  draw();
+}
+
+/* coordinate helpers */
+function canvasToGrid(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = Math.floor((clientX - rect.left) * scaleX / pixelSize);
+  const y = Math.floor((clientY - rect.top) * scaleY / pixelSize);
+  return { x: clamp(x,0,GRID-1), y: clamp(y,0,GRID-1) };
+}
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* drawing functions */
+function draw(){
+  // fill white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // draw pixels
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+      const col = pixels[y][x];
+      if(col && col !== ''){
+        ctx.fillStyle = col;
+        ctx.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize);
+      }
+    }
+  }
+
+  // grid lines
+  if(showGrid){
+    ctx.strokeStyle = 'rgba(7,16,34,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let i=0;i<=GRID;i++){
+      const pos = Math.round(i*pixelSize) + 0.5; // crisp line
+      // vertical
+      ctx.moveTo(pos, 0);
+      ctx.lineTo(pos, canvas.height);
+      // horizontal
+      ctx.moveTo(0, pos);
+      ctx.lineTo(canvas.width, pos);
+    }
+    ctx.stroke();
+  }
+}
+
+/* painting logic (brush can be >1 pixel) */
+let painting = false;
+let lastCell = null;
+
+function paintAtCell(cx, cy){
+  if(cx<0||cy<0||cx>=GRID||cy>=GRID) return false;
+  let changed = false;
+  const half = Math.floor(brush/2);
+  for(let dy=-half; dy<=half; dy++){
+    for(let dx=-half; dx<=half; dx++){
+      const xx = cx + dx, yy = cy + dy;
+      if(xx<0||yy<0||xx>=GRID||yy>=GRID) continue;
+      const prev = pixels[yy][xx] || '';
+      const newval = (tool === 'eraser') ? '' : color;
+      if(prev !== newval){
+        pixels[yy][xx] = newval;
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+function beginPaint(e){
+  painting = true;
+  const p = pointerToGrid(e);
+  lastCell = p;
+  const changed = paintAtCell(p.x, p.y);
+  if(changed) { pushState(); draw(); }
+}
+function movePaint(e){
+  if(!painting) return;
+  const p = pointerToGrid(e);
+  if(!lastCell || p.x !== lastCell.x || p.y !== lastCell.y){
+    const changed = paintAtCell(p.x, p.y);
+    if(changed) draw();
+    lastCell = p;
+  }
+}
+function endPaint(){
+  painting = false;
+  lastCell = null;
+}
+
+function pointerToGrid(e){
+  // supports mouse/touch pointer event or touch list
+  let clientX, clientY;
+  if(e.touches && e.touches.length){
+    clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+  } else {
+    clientX = e.clientX; clientY = e.clientY;
+  }
+  return canvasToGrid(clientX, clientY);
+}
+
+/* undo/redo */
+function pushState(){
+  try{
+    if(undoStack.length >= MAX_STACK) undoStack.shift();
+    undoStack.push(JSON.stringify(pixels));
+    redoStack = [];
+    updateUndoRedo();
+  }catch(e){}
+}
+function undo(){
+  if(!undoStack.length) return;
+  const cur = undoStack.pop(); // current
+  redoStack.push(cur);
+  const prev = undoStack[undoStack.length-1];
+  if(prev) pixels = JSON.parse(prev);
+  else pixels = create2D(GRID, GRID, '');
+  draw();
+  updateUndoRedo();
+}
+function redo(){
+  if(!redoStack.length) return;
+  const s = redoStack.pop();
+  undoStack.push(s);
+  pixels = JSON.parse(s);
+  draw();
+  updateUndoRedo();
+}
+function updateUndoRedo(){
+  undoBtn.disabled = undoStack.length <= 1; // first item is initial state
+  redoBtn.disabled = redoStack.length === 0;
+}
+
+/* save as PNG (crisp) */
+function savePNG(){
+  // create a new offscreen canvas at exact grid resolution: GRID x GRID scaled up by desired export size
+  const exportScale = 1; // keep 1px = 1 pixel
+  const out = document.createElement('canvas');
+  out.width = GRID;
+  out.height = GRID;
+  const octx = out.getContext('2d');
+  // white background
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0,0,out.width,out.height);
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+      const col = pixels[y][x];
+      if(col && col!==''){
+        octx.fillStyle = col;
+        octx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+  // scale up to keep crisp: create final canvas
+  const final = document.createElement('canvas');
+  const scale = Math.round(PIXEL_CANVAS / GRID); // e.g. 512/32 = 16px per pixel
+  final.width = out.width * scale;
+  final.height = out.height * scale;
+  const fctx = final.getContext('2d');
+  fctx.imageSmoothingEnabled = false;
+  fctx.drawImage(out, 0, 0, final.width, final.height);
+
+  final.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const now = new Date().toISOString().replace(/[:.]/g,'-');
+    a.download = `rachitfun_pixel_${now}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}
+
+/* UI bindings */
+gridSizeSel.addEventListener('change', (e) => {
+  const val = Number(e.target.value);
+  if(!val) return;
+  // before switching size, ask user to confirm (we could scale but safer to reset)
+  if(!confirm(`Change canvas to ${val}×${val}? This will reset current drawing.`)) {
+    // revert selection to current GRID
+    gridSizeSel.value = GRID;
+    return;
+  }
+  GRID = val;
+  pixelSize = PIXEL_CANVAS / GRID;
+  pixels = create2D(GRID, GRID, '');
+  undoStack = []; redoStack = [];
+  pushState();
+  draw();
+  adaptCanvasScale();
+});
+
+brushSizeEl.addEventListener('input', (e)=> {
+  brush = Number(e.target.value);
+  brushLabel.textContent = brush;
+});
+
+colorPicker.addEventListener('input', (e)=> { color = e.target.value; tool='pen'; eraserBtn.classList.remove('primary'); });
+
+[quickBlack, quickRed, quickAqua].forEach(el=>{
+  el.addEventListener('click', ()=> {
+    const c = el.dataset.color || '#000000';
+    colorPicker.value = c; color = c; tool='pen'; eraserBtn.classList.remove('primary');
+  });
+});
+
+eraserBtn.addEventListener('click', ()=> {
+  if(tool === 'eraser'){ tool='pen'; eraserBtn.classList.remove('primary'); } else { tool='eraser'; eraserBtn.classList.add('primary'); }
+});
+
+gridToggle.addEventListener('click', ()=> {
+  showGrid = !showGrid;
+  gridToggle.textContent = 'Grid: ' + (showGrid ? 'ON' : 'OFF');
+  draw();
+});
+
+clearBtn.addEventListener('click', ()=> {
+  if(!confirm('Clear the pixel canvas?')) return;
+  clearPixels();
+  pushState();
+  draw();
+});
+
+undoBtn.addEventListener('click', undo);
+redoBtn.addEventListener('click', redo);
+
+saveBtn.addEventListener('click', savePNG);
+
+/* Pointer events for painting */
+canvas.addEventListener('pointerdown', (e)=> {
+  // only left button or touch/stylus
+  if(e.pointerType === 'mouse' && e.button !== 0) return;
+  canvas.setPointerCapture(e.pointerId);
+  beginPaint(e);
+});
+canvas.addEventListener('pointermove', (e)=> {
+  movePaint(e);
+});
+canvas.addEventListener('pointerup', (e)=> {
+  try{ canvas.releasePointerCapture(e.pointerId); } catch(e){}
+  endPaint();
+});
+canvas.addEventListener('pointercancel', ()=> endPaint());
+
+/* keyboard shortcuts */
+window.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){ e.preventDefault(); undo(); }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); }
+  if(e.key === 'e' || e.key === 'E'){ tool='eraser'; eraserBtn.classList.add('primary'); }
+  if(e.key === 'b' || e.key === 'B'){ tool='pen'; eraserBtn.classList.remove('primary'); }
+});
+
+/* responsive scaling: we want crisp pixels - scale canvas in CSS but render using logical resolution */
+function adaptCanvasScale(){
+  // find the available width of pixelCard
+  const card = document.getElementById('pixelCard');
+  const padding = 32; // some spacing
+  const maxW = Math.min(card.clientWidth - padding, 720);
+  // compute scale factor to set CSS width while keeping logical resolution constant
+  const scale = Math.max(160, Math.min(maxW, PIXEL_CANVAS)); // choose at least small size
+  canvas.style.width = scale + 'px';
+  canvas.style.height = scale + 'px';
+  // pixelSize recalculated from logical resolution
+  pixelSize = canvas.width && GRID ? (canvas.width / GRID) : (PIXEL_CANVAS / GRID);
+  draw();
+}
+
+/* push initial state */
+function pushState(){
+  try{
+    if(undoStack.length >= MAX_STACK) undoStack.shift();
+    undoStack.push(JSON.stringify(pixels));
+    redoStack = [];
+    updateUndoRedo();
+  }catch(e){}
+}
+
+/* initialize */
+(function init(){
+  // choose default GRID 32 (already set), init pixelSize
+  pixelSize = PIXEL_CANVAS / GRID;
+  pushState();
+  initCanvas();
+  updateUndoRedo();
+  window.addEventListener('resize', () => { adaptCanvasScale(); });
+})();
+
+function updateUndoRedo(){
+  undoBtn.disabled = undoStack.length <= 1;
+  redoBtn.disabled = redoStack.length === 0;
+}
+
+/* helper to set pixels from exported state (used by undo/redo) */
+function setPixelsFromJSON(json){
+  try{
+    pixels = JSON.parse(json);
+  }catch(e){
+    pixels = create2D(GRID, GRID, '');
+  }
+  draw();
+}
+
+/* small safeguard: when grid size changed and undo exists, clearing redo/undo stacks handled above */
+
+/* End of script */
+</script>
+</body>
+</html>

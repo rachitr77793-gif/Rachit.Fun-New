@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Emoji Rain — Rachit.Fun</title>
+
+<style>
+  :root{--card:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:#f7fbff;color:#071133}
+
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 20px;
+    background:transparent;
+    border-bottom:1px solid rgba(0,0,0,0.03);
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+  .left {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-weight:800;
+  }
+  .left .logo{font-size:20px}
+  .left .site{font-size:20px}
+
+  .right {
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .color-picker{
+    width:36px;
+    height:28px;
+    border-radius:8px;
+    border:1px solid #ccc;
+  }
+
+  .btn{
+    background:var(--card);
+    border:1px solid rgba(0,0,0,0.06);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  #rain{
+    width:100%;
+    height:80vh;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    font-weight:700;
+    user-select:none;
+    cursor:pointer;
+  }
+
+  #panel{
+    width:100%;
+    padding:20px;
+    text-align:center;
+    font-size:18px;
+    font-weight:800;
+    display:flex;
+    justify-content:center;
+    gap:20px;
+  }
+
+  input[type=number]{
+    width:70px;
+    padding:6px;
+    border-radius:8px;
+    border:1px solid rgba(0,0,0,0.2);
+    font-size:16px;
+    text-align:center;
+    font-weight:700;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="left">
+    <div class="logo">🎮</div>
+    <div class="site">Rachit.Fun</div>
+  </div>
+
+  <div class="right">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+      BG
+      <input id="bgPicker" class="color-picker" type="color" value="#f7fbff" />
+    </label>
+
+    <button class="btn" id="homeBtn">Home</button>
+    <button class="btn" id="resetAllBtn">Reset All</button>
+  </div>
+</header>
+
+<div id="panel">
+  Emojis Per Click:
+  <input type="number" id="countInput" min="1" max="20" value="10" />
+</div>
+
+<div id="rain">Click Anywhere for Emoji Rain</div>
+
+<script>
+/* ===== Background Persistence ===== */
+const BG_KEY = 'rachit_bg';
+const bgPicker = document.getElementById('bgPicker');
+const saved = localStorage.getItem(BG_KEY);
+if (saved) {
+  document.body.style.background = saved;
+  bgPicker.value = saved;
+}
+bgPicker.addEventListener('input', e => {
+  document.body.style.background = e.target.value;
+  localStorage.setItem(BG_KEY, e.target.value);
+});
+
+/* ===== FIXED HOME BUTTON ===== */
+document.getElementById('homeBtn').onclick = () => {
+  window.location.href = 'index.html';
+};
+
+/* ===== FIXED RESET BUTTON ===== */
+document.getElementById('resetAllBtn').onclick = () => {
+  if (!confirm('Reset everything? This clears BG setting.')) return;
+  localStorage.removeItem(BG_KEY);
+  window.location.href = 'index.html';
+};
+
+/* ===== Emoji Rain Engine ===== */
+const rain = document.getElementById('rain');
+const emojis = ["😀","🌈","⭐","🔥","💧","🍀","🎈","🐱","⚡","❤️"];
+const countInput = document.getElementById("countInput");
+
+rain.onclick = () => {
+  let amount = parseInt(countInput.value);
+
+  if (isNaN(amount) || amount < 1) amount = 1;
+  if (amount > 20) amount = 20;
+
+  for (let i = 0; i < amount; i++) {
+    const e = document.createElement('div');
+    e.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+    Object.assign(e.style, {
+      position: 'absolute',
+      left: Math.random() * 100 + '%',
+      top: '-20px',
+      fontSize: Math.random() * 20 + 20 + 'px'
+    });
+
+    rain.appendChild(e);
+
+    e.animate(
+      [{ transform: 'translateY(0)' }, { transform: 'translateY(300px)' }],
+      { duration: 2000 + Math.random() * 1000, easing: 'linear' }
+    );
+
+    setTimeout(() => e.remove(), 3000);
+  }
+};
+</script>
+
+</body>
+</html>

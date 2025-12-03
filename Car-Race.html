@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Car Race — Rachit.Fun</title>
+
+<style>
+:root{
+  --card:#fff;
+  --bg:#f7fbff;
+  --neon:#00e1ff;
+  --neon-glow:rgba(0,150,255,0.12);
+  --road-width:420px;
+}
+*{box-sizing:border-box}
+html,body{
+  height:100%;margin:0;
+  font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+  background:var(--bg);color:#071133;
+  -webkit-tap-highlight-color: transparent;
+}
+body{overflow:hidden}
+
+.topbar{
+  display:flex;justify-content:space-between;
+  align-items:center;padding:12px 20px;
+  background:transparent;border-bottom:1px solid rgba(0,0,0,0.03);
+  position:sticky;top:0;z-index:1000;
+}
+.left{display:flex;align-items:center;gap:12px;font-weight:800}
+.left .logo{font-size:20px}
+.left .site{font-size:20px}
+.right{display:flex;align-items:center;gap:10px}
+
+.color-picker{
+  width:36px;height:28px;border-radius:8px;border:1px solid #ccc;padding:0
+}
+
+.score-pill{
+  padding:6px 10px;border-radius:999px;
+  background:linear-gradient(180deg,#fff,#f1f5f9);
+  border:1px solid rgba(0,0,0,0.06);
+  font-weight:700
+}
+
+.btn{
+  background:var(--card);
+  border:1px solid rgba(0,0,0,0.06);
+  padding:8px 12px;border-radius:10px;
+  cursor:pointer;font-weight:700
+}
+
+.controls-top{
+  display:flex;gap:18px;align-items:center;
+  padding:12px 18px;justify-content:center;
+  border-bottom:1px solid rgba(0,0,0,0.02);
+  background:transparent;z-index:900;position:relative;
+}
+
+.select{
+  padding:8px 10px;border-radius:10px;
+  border:1px solid rgba(0,0,0,0.06);
+  background:var(--card);font-weight:800
+}
+
+.btn2{
+  background:var(--card);
+  border:1px solid rgba(0,0,0,0.06);
+  padding:10px 14px;border-radius:10px;
+  cursor:pointer;font-weight:800
+}
+
+.top-status{
+  display:flex;gap:16px;align-items:center;
+  font-weight:900;color:#071133;
+}
+
+.score-bubble{
+  background:linear-gradient(180deg,#fff,#f1f5f9);
+  padding:8px 12px;border-radius:12px;
+  border:1px solid rgba(0,0,0,0.06)
+}
+
+#pageWrap{
+  width:100%;height: calc(100vh - 112px);
+  display:flex;justify-content:center;align-items:flex-start;
+  padding-top:10px;position:relative;
+}
+
+#gameCol{display:flex;flex-direction:column;gap:12px;align-items:center}
+
+#road{
+  width:var(--road-width);
+  height: calc(100vh - 260px);
+  max-height:860px;min-height:520px;
+  background: linear-gradient(#3f3f3f,#515151);
+  position:relative;overflow:hidden;
+  border-left:6px solid #fff;border-right:6px solid #fff;
+  border-radius:10px;box-shadow:0 8px 40px var(--neon-glow);
+  z-index:10;
+}
+
+#road::before{
+  content:'';position:absolute;left:50%;transform:translateX(-50%);
+  width:6px;height:100%;
+  background:linear-gradient(#fff, rgba(255,255,255,0.2));
+  opacity:0.12;z-index:1
+}
+
+#road::after{
+  content:'';position:absolute;inset:0;
+  box-shadow:0 0 60px rgba(0,150,255,0.06) inset;
+  pointer-events:none;z-index:2
+}
+
+.lane-dash{
+  position:absolute;left:50%;width:6px;height:36px;
+  transform:translateX(-50%);border-radius:4px;
+  background:rgba(255,255,255,0.75);opacity:0.9;z-index:3
+}
+
+.player,.enemy{
+  position:absolute;border-radius:12px;
+  width:60px;height:96px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 12px 28px rgba(0,0,0,0.4);
+  transition:left 110ms cubic-bezier(.2,.8,.2,1), transform 90ms;
+  pointer-events:none;z-index:20
+}
+
+.player{
+  background: linear-gradient(180deg,#083547, rgba(0,150,255,0.06));
+  border:2px solid rgba(0,230,255,0.9);
+  box-shadow:0 12px 30px rgba(0,0,0,0.45),0 0 18px rgba(0,230,255,0.08)
+}
+
+.car-body{
+  width:84%;height:66%;border-radius:10px;
+  position:relative;overflow:visible;
+  background:linear-gradient(180deg,#0ea7c7,#063f49);
+}
+.car-top{
+  position:absolute;top:6%;left:12%;right:12%;
+  height:34%;background:linear-gradient(180deg,#cfeff6,#8fe6f0);
+  border-radius:6px;opacity:0.95;
+  box-shadow: inset 0 -6px 10px rgba(0,0,0,0.12);
+}
+.wheel{
+  position:absolute;bottom:-10%;
+  width:26%;height:30%;background:#071133;border-radius:50%;
+  left:8%;box-shadow:0 6px 10px rgba(0,0,0,0.5);z-index:5
+}
+.wheel.r{left:auto;right:8%}
+
+.enemy{
+  z-index:18;border-radius:10px;
+  overflow:hidden;
+}
+
+.powerup{
+  position:absolute;
+  width:44px;height:44px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;color:#071133;
+  background:linear-gradient(180deg,#fff,#e8f9ff);
+  border:2px solid rgba(0,0,0,0.06);
+  box-shadow:0 8px 18px rgba(0,0,0,0.18);z-index:22;
+}
+
+.hud{
+  position:absolute;top:32px;left:50%;transform:translateX(-50%);
+  z-index:50;color:white;font-weight:900;
+  text-shadow:0 6px 14px rgba(0,0,0,0.6);pointer-events:none;
+}
+
+.controls-ind{
+  position:absolute;top:12px;right:12px;
+  display:flex;gap:8px;z-index:50;pointer-events:none;
+}
+
+#gameOver{
+  display:none;margin-top:12px;width:420px;
+  background:rgba(2,6,23,0.78);color:white;
+  padding:16px 18px;border-radius:12px;
+  box-shadow:0 18px 48px rgba(0,0,0,0.45);
+  text-align:center;z-index:50;
+}
+
+.touch-controls{
+  position:absolute;bottom:18px;left:50%;
+  transform:translateX(-50%);
+  display:flex;gap:12px;z-index:60;pointer-events:auto;
+}
+.touch-btn{
+  width:82px;height:60px;border-radius:12px;
+  background:var(--card);border:1px solid rgba(0,0,0,0.06);
+  font-weight:900;font-size:22px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,0.18);
+}
+
+@media (max-width:420px){
+  :root{--road-width:360px}
+  .player,.enemy{width:52px;height:84px}
+  .touch-btn{width:72px;height:56px}
+  .hud{top:20px}
+}
+</style>
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="left">
+    <div class="logo">🎮</div>
+    <div class="site">Rachit.Fun</div>
+  </div>
+
+  <div class="right">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+      BG
+      <input id="bgPicker" class="color-picker" type="color" value="#f7fbff">
+    </label>
+
+    <button class="btn" id="homeBtn">Home</button>
+    <button class="btn" id="resetAllBtn">Reset All</button>
+  </div>
+</header>
+
+<script>
+const BG_KEY = 'rachit_bg';
+const bgPicker = document.getElementById('bgPicker');
+const saved = localStorage.getItem(BG_KEY);
+
+if (saved) {
+  document.body.style.background = saved;
+  bgPicker.value = saved;
+}
+
+bgPicker.addEventListener('input', e => {
+  document.body.style.background = e.target.value;
+  localStorage.setItem(BG_KEY, e.target.value);
+});
+
+
+// ⭐ FIXED — HOME NOW GOES TO index.html ⭐
+document.getElementById('homeBtn').addEventListener('click', () => {
+  window.location.href = 'index.html';
+});
+
+
+document.getElementById('resetAllBtn').addEventListener('click', () => {
+  if (!confirm('Reset everything? This clears BG setting.')) return;
+  localStorage.removeItem(BG_KEY);
+  location.reload();
+});
+</script>
+
+<!-- TOP CONTROLS -->
+<div class="controls-top">
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button id="startBtn" class="btn2">START</button>
+    <button id="pauseBtn" class="btn2">PAUSE</button>
+    <button id="restartBtn" class="btn2">RESTART</button>
+  </div>
+
+  <div style="display:flex;gap:12px;align-items:center;">
+    <label style="font-weight:900">
+      Difficulty:
+      <select id="difficultySelect" class="select" style="margin-left:8px">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </label>
+
+    <label style="font-weight:900">
+      Enemy Style:
+      <select id="enemyStyleSelect" class="select" style="margin-left:8px">
+        <option value="mixed" selected>Mixed</option>
+        <option value="neon">Neon</option>
+        <option value="random">Random</option>
+      </select>
+    </label>
+  </div>
+
+  <div style="margin-left:18px;" class="top-status">
+    <div class="score-bubble" id="scoreBubble">Score: 0</div>
+    <div style="font-weight:800;color:#0b2440">Car Race</div>
+  </div>
+</div>
+
+<!-- GAME AREA -->
+<div id="pageWrap">
+  <div id="gameCol">
+
+    <div id="road">
+      <div class="hud">
+        <div id="scoreText">Score: 0</div>
+        <div style="font-size:12px;font-weight:700" id="statusText">Ready — Car Race</div>
+      </div>
+
+      <div class="controls-ind">
+        <div id="shieldCount" style="padding:6px 8px;border-radius:8px;background:linear-gradient(#fff,#f1f5f9);font-weight:700;display:none">Shield: 0</div>
+        <div id="slowCount" style="padding:6px 8px;border-radius:8px;background:linear-gradient(#fff,#f1f5f9);font-weight:700;display:none">Slow: 0</div>
+      </div>
+
+      <div id="player" class="player" style="left:180px; bottom:20px;">
+        <div class="car-body">
+          <div class="car-top"></div>
+          <div class="wheel"></div>
+          <div class="wheel r"></div>
+        </div>
+      </div>
+
+      <div id="enemies"></div>
+    </div>
+
+    <div id="gameOver">
+      <div style="font-size:20px;font-weight:900">GAME OVER</div>
+      <div id="finalScore" style="margin-top:8px;font-weight:800">Score: 0</div>
+      <div style="margin-top:12px"><button id="playAgain" class="btn2">Play Again</button></div>
+    </div>
+
+    <div class="touch-controls" id="touchControls" style="display:none">
+      <div id="leftTouch" class="touch-btn">◀</div>
+      <div id="rightTouch" class="touch-btn">▶</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// --------------------
+// EXACT ORIGINAL GAME CODE (Unchanged)
+// --------------------
+
+const road = document.getElementById('road');
+const playerEl = document.getElementById('player');
+const enemiesEl = document.getElementById('enemies');
+
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const restartBtn = document.getElementById('restartBtn');
+
+const difficultySelect = document.getElementById('difficultySelect');
+const enemyStyleSelect = document.getElementById('enemyStyleSelect');
+
+const scoreBubble = document.getElementById('scoreBubble');
+
+const gameOverPanel = document.getElementById('gameOver');
+const finalScore = document.getElementById('finalScore');
+const playAgain = document.getElementById('playAgain');
+
+const leftTouch = document.getElementById('leftTouch');
+const rightTouch = document.getElementById('rightTouch');
+const touchControls = document.getElementById('touchControls');
+
+let roadRect, laneX = [];
+let LANE_COUNT = 3;
+let playerLane = 1;
+
+let gameRunning = false;
+let gamePaused = false;
+
+let score = 0;
+let lastFrame = 0;
+
+let enemies = [];
+let spawnInterval = 1000;
+let enemyBaseSpeed = 180;
+
+// ----- FUNCTIONS: EXACTLY SAME ------
+
+function computeLanes(){
+  roadRect = road.getBoundingClientRect();
+  const roadW = roadRect.width;
+  const margin = 20;
+  const usable = roadW - margin*2;
+  const laneWidth = usable / LANE_COUNT;
+
+  laneX = [];
+  for(let i=0;i<LANE_COUNT;i++){
+    const x = margin + i*laneWidth + ((laneWidth - playerEl.offsetWidth)/2);
+    laneX.push(x);
+  }
+
+  setPlayerLane(playerLane, true);
+}
+
+function setPlayerLane(lane, instant=false){
+  playerLane = Math.max(0, Math.min(LANE_COUNT-1, lane));
+  const leftPx = laneX[playerLane];
+  
+  if(instant){
+    playerEl.style.transition = 'none';
+    playerEl.style.left = leftPx + 'px';
+    setTimeout(()=> playerEl.style.transition = 'left 110ms cubic-bezier(.2,.8,.2,1)', 20);
+  } else {
+    playerEl.style.left = leftPx + 'px';
+  }
+}
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowLeft' || e.key.toLowerCase()==='a') setPlayerLane(playerLane-1);
+  if(e.key === 'ArrowRight' || e.key.toLowerCase()==='d') setPlayerLane(playerLane+1);
+  if(e.code === 'Space'){ if(!gameRunning) startSequence(); else pauseToggle(); }
+});
+
+leftTouch?.addEventListener('pointerdown', ()=> setPlayerLane(playerLane-1));
+rightTouch?.addEventListener('pointerdown', ()=> setPlayerLane(playerLane+1));
+
+if(('ontouchstart' in window) || navigator.maxTouchPoints > 0) touchControls.style.display='flex';
+
+function pickEnemyColor(){
+  const mode = enemyStyleSelect.value;
+  const palette = ['#f3d23b','#00bcd4','#7c4dff','#ff6f00','#00c853','#8e24aa','#0288d1'];
+  if(mode==='neon') return '#00bcd4';
+  if(mode==='random') return palette[Math.floor(Math.random()*palette.length)];
+  return Math.random()<0.5 ? '#00bcd4' : palette[Math.floor(Math.random()*palette.length)];
+}
+
+function adjustDifficulty(){
+  const d = difficultySelect.value;
+  if(d==='easy'){ spawnInterval=1400; enemyBaseSpeed=150; setCarSize('small'); }
+  else if(d==='medium'){ spawnInterval=1000; enemyBaseSpeed=180; setCarSize('medium'); }
+  else{ spawnInterval=750; enemyBaseSpeed=220; setCarSize('large'); }
+}
+
+function setCarSize(size){
+  if(size==='small'){ playerEl.style.width='52px'; playerEl.style.height='84px'; }
+  else if(size==='large'){ playerEl.style.width='68px'; playerEl.style.height='108px'; }
+  else{ playerEl.style.width='60px'; playerEl.style.height='96px'; }
+
+  setTimeout(()=> computeLanes(),60);
+}
+
+function spawnEnemy(){
+  const dangerGap = 140;
+  const safeLanes = [];
+
+  for(let l=0;l<LANE_COUNT;l++){
+    const last = enemies.filter(e=>e.lane===l).sort((a,b)=>b.y-a.y)[0];
+    if(!last) safeLanes.push(l);
+    else if((road.offsetHeight-last.y)>dangerGap) safeLanes.push(l);
+    else if(last.y<-80) safeLanes.push(l);
+  }
+
+  if(safeLanes.length===0) return;
+
+  safeLanes.sort(()=>Math.random()-0.5);
+  let chosen = safeLanes[0];
+
+  const enemy = document.createElement('div');
+  enemy.className='enemy';
+  enemy.style.width = playerEl.offsetWidth+'px';
+  enemy.style.height = playerEl.offsetHeight+'px';
+
+  enemy.style.left = laneX[chosen]+'px';
+  enemy.style.top = '-140px';
+  enemy.style.background = pickEnemyColor();
+  enemy.innerHTML='<div style="width:70%;height:64%;border-radius:8px;margin-top:6%;background:rgba(255,255,255,0.12)"></div>';
+
+  enemiesEl.appendChild(enemy);
+
+  const diff = difficultySelect.value;
+  let base=enemyBaseSpeed;
+  
+  if(diff==='easy') base*=0.9;
+  if(diff==='hard') base*=1.15;
+
+  const speed = base + (Math.random()*80 - 40);
+
+  enemies.push({el:enemy, lane:chosen, y:-140, speed});
+}
+
+function rect(el){
+  const r=el.getBoundingClientRect();
+  return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+}
+
+function intersects(a,b){
+  return !(a.right < b.left+4 || a.left+4 > b.right || a.bottom < b.top+4 || a.top+4 > b.bottom);
+}
+
+function update(ts){
+  if(!lastFrame) lastFrame=ts;
+  const dt=Math.min(0.06,(ts-lastFrame)/1000);
+  lastFrame=ts;
+
+  if(gameRunning && !gamePaused){
+    adjustDifficulty();
+
+    if(!update._lastSpawn) update._lastSpawn=ts;
+    if(ts-update._lastSpawn>spawnInterval){
+      spawnEnemy();
+      update._lastSpawn=ts;
+    }
+
+    for(let i=enemies.length-1;i>=0;i--){
+      const e=enemies[i];
+      e.y += e.speed*dt;
+      e.el.style.top = e.y+'px';
+
+      if(e.y>road.offsetHeight+160){
+        try{e.el.remove();}catch(_){}
+        enemies.splice(i,1);
+      }
+    }
+
+    const pr = rect(playerEl);
+    for(let e of enemies){
+      if(intersects(pr, rect(e.el))){
+        endGame();
+        return;
+      }
+    }
+
+    score+=10*dt;
+    scoreBubble.textContent='Score: '+Math.floor(score);
+  }
+
+  if(gameRunning) requestAnimationFrame(update);
+}
+
+function startSequence(){
+  if(gameRunning) return;
+  resetRound();
+
+  let t=3;
+  const old=startBtn.textContent;
+  startBtn.textContent=t;
+
+  const iv=setInterval(()=>{
+    t--;
+    if(t>0) startBtn.textContent=t;
+    else {
+      clearInterval(iv);
+      startBtn.textContent=old;
+      beginGame();
+    }
+  },850);
+}
+
+function beginGame(){
+  gameRunning=true;
+  gamePaused=false;
+  score=0;
+  lastFrame=0;
+
+  gameOverPanel.style.display='none';
+  scoreBubble.textContent='Score: 0';
+
+  requestAnimationFrame(update);
+}
+
+function pauseToggle(){
+  gamePaused=!gamePaused;
+  pauseBtn.textContent = gamePaused ? 'RESUME':'PAUSE';
+}
+
+function endGame(){
+  gameRunning=false;
+  gamePaused=false;
+  finalScore.textContent='Score: '+Math.floor(score);
+  gameOverPanel.style.display='block';
+}
+
+function resetRound(){
+  for(const e of enemies){
+    try{e.el.remove();}catch(_){}
+  }
+
+  enemies=[];
+  score=0;
+  scoreBubble.textContent='Score: 0';
+
+  gameOverPanel.style.display='none';
+  playerLane=1;
+
+  computeLanes();
+  setPlayerLane(playerLane,true);
+}
+
+// EVENT LISTENERS
+startBtn.addEventListener('click', startSequence);
+pauseBtn.addEventListener('click', pauseToggle);
+restartBtn.addEventListener('click', resetRound);
+playAgain.addEventListener('click', ()=>{resetRound();startSequence();});
+
+window.addEventListener('load', ()=>{
+  computeLanes();
+  setPlayerLane(playerLane,true);
+  adjustDifficulty();
+
+  if(('ontouchstart'in window)||navigator.maxTouchPoints>0)
+    touchControls.style.display='flex';
+});
+
+window.addEventListener('resize', computeLanes);
+
+difficultySelect.addEventListener('change', adjustDifficulty);
+enemyStyleSelect.addEventListener('change', ()=>{});
+</script>
+
+</body>
+</html>
